@@ -87,7 +87,10 @@ class TestObj1 : public IntrusiveList<TestObj1<_Options0>, _Options0>::Hook {
   TestObj1() : instance_(s_instance_counter_++) {}
 
   // Does not copy the Node itself, just maintains the assigned instance number.
-  TestObj1(TestObj1 const& _r) : instance_(_r.instance_) {}  // NOLINT cannot be explicit as used by std::list
+  TestObj1(TestObj1 const& _r)  // NOLINT cannot be explicit as used by std::list
+    : instance_(_r.instance_),
+      IntrusiveList<TestObj1<_Options0>, _Options0>::Hook() { 
+  }
 
   // Implements comparison operators.
   bool operator == (TestObj1 const& _r) const {

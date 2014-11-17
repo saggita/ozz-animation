@@ -128,7 +128,10 @@ class TestObj2 : public TestObj1<_Options1>,
   TestObj2() {}
 
   // Does not copy the Node itself, just maintains the assigned instance number.
-  explicit TestObj2(TestObj2 const& _r) : TestObj1<_Options1>(_r) {}
+  explicit TestObj2(TestObj2 const& _r)
+    : TestObj1<_Options1>(_r),
+      IntrusiveList<TestObj2<_Options1, _Options2>, _Options2>::Hook() {
+  }
 };
 
 // Applies the _Test function to some std::list<> and Intrusive<> types.

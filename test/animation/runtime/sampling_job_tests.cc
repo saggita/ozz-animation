@@ -602,7 +602,9 @@ TEST(SamplingCache, SamplingJob) {
   RawAnimation raw_animation;
   raw_animation.duration = 1.f;
   raw_animation.tracks.resize(1);  // Adds a joint.
-  const RawAnimation::TranslationKey empty_key = {};
+  const RawAnimation::TranslationKey empty_key = {
+    0.f, RawAnimation::TranslationKey::identity()
+  };
   raw_animation.tracks[0].translations.push_back(empty_key);
 
   SamplingCache cache(1);

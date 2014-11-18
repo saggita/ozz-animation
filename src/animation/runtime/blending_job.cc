@@ -115,7 +115,7 @@ bool BlendingJob::Validate() const {
 
   // Validates additive layers.
   for (const Layer* layer = additive_layers.begin;
-       additive_layers.begin && layer < additive_layers.end;
+       additive_layers.begin && layer < additive_layers.end;  // Handles NULL pointers.
        ++layer) {
     valid &= ValidateLayer(*layer, min_range);
   }

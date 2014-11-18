@@ -9,6 +9,7 @@ Release version 0.7.1.----------------------------------------------------------
 
  # Library
   - [offline] Updates to fbx sdk 2015.1 with vs2013 support.
+  
  # Samples
   - Adds sample_skin_fbx2skin to binary packages.
 

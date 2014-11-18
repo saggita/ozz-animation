@@ -49,6 +49,26 @@ BlendingJob::BlendingJob()
     : threshold(.1f) {
 }
 
+namespace {
+bool ValidateLayer(const BlendingJob::Layer& _layer, ptrdiff_t _min_range) {
+  bool valid = true;
+
+  // Tests transforms validity.
+  valid &= _layer.transform.begin != NULL;
+  valid &= _layer.transform.end >= _layer.transform.begin;
+  valid &= _layer.transform.end - _layer.transform.begin >= _min_range;
+
+  // Joint weights are optional.
+  if (_layer.joint_weights.begin != NULL) {
+    valid &= _layer.joint_weights.end >= _layer.joint_weights.begin;
+    valid &= _layer.joint_weights.end - _layer.joint_weights.begin >= _min_range;
+  } else {
+    valid &= _layer.joint_weights.end == NULL;
+  }
+  return valid;
+}
+}  // namespace
+
 bool BlendingJob::Validate() const {
   // Don't need any early out, as jobs are valid in most of the performance
   // critical cases.
@@ -77,18 +97,14 @@ bool BlendingJob::Validate() const {
   for (const Layer* layer = layers.begin;
        layers.begin && layer < layers.end;  // Handles NULL pointers.
        ++layer) {
-    // Tests transforms validity.
-    valid &= layer->transform.begin != NULL;
-    valid &= layer->transform.end >= layer->transform.begin;
-    valid &= layer->transform.end - layer->transform.begin >= min_range;
+    valid &= ValidateLayer(*layer, min_range );
+  }
 
-    // Joint weights are optional.
-    if (layer->joint_weights.begin != NULL) {
-      valid &= layer->joint_weights.end >= layer->joint_weights.begin;
-      valid &= layer->joint_weights.end - layer->joint_weights.begin >= min_range;
-    } else {
-      valid &= layer->joint_weights.end == NULL;
-    }
+  // Validates additive layers.
+  for (const Layer* layer = additive_layers.begin;
+       additive_layers.begin && layer < additive_layers.end;  // Handles NULL pointers.
+       ++layer) {
+    valid &= ValidateLayer(*layer, min_range);
   }
 
   return valid;

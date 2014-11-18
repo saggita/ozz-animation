@@ -113,6 +113,10 @@ struct BlendingJob {
   // The range of layers that must be blended.
   Range<const Layer> layers;
 
+  // Job input additive layers.
+  // The range of layers that must be added to blended output.
+  Range<const Layer> additive_layers;
+
   // The skeleton bind pose. The size of this buffer defines the number of
   // transforms to blend. This is the reference because this buffer is defined
   // by the skeleton that all the animations belongs to.

@@ -79,6 +79,7 @@ bool BlendingJob::Validate() const {
   valid &= threshold > 0.f;
 
   // Test for NULL begin pointers.
+  // Blending layers are mandatory, additive aren't.
   valid &= layers.begin != NULL;
   valid &= bind_pose.begin != NULL;
   valid &= output.begin != NULL;
@@ -95,14 +96,17 @@ bool BlendingJob::Validate() const {
 
   // Validates layers.
   for (const Layer* layer = layers.begin;
-       layers.begin && layer < layers.end;  // Handles NULL pointers.
+       layers.begin && layer < layers.end;
        ++layer) {
     valid &= ValidateLayer(*layer, min_range );
   }
 
+  // Test additive layers range is valid (implicitly test for NULL end pointers).
+  valid &= additive_layers.end >= additive_layers.begin;
+
   // Validates additive layers.
   for (const Layer* layer = additive_layers.begin;
-       additive_layers.begin && layer < additive_layers.end;  // Handles NULL pointers.
+       additive_layers.begin && layer < additive_layers.end;
        ++layer) {
     valid &= ValidateLayer(*layer, min_range);
   }

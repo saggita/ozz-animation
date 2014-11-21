@@ -41,9 +41,9 @@ TEST(JobValidity, BlendingJob) {
   const ozz::math::SoaTransform identity = ozz::math::SoaTransform::identity();
   const ozz::math::SimdFloat4 zero = ozz::math::simd_float4::zero();
   BlendingJob::Layer layers[2];
-  ozz::math::SoaTransform bind_poses[3] = {
+  const ozz::math::SoaTransform bind_poses[3] = {
     identity, identity, identity};
-  ozz::math::SoaTransform input_transforms[3] = {
+  const ozz::math::SoaTransform input_transforms[3] = {
     identity, identity, identity};
   ozz::math::SoaTransform output_transforms[3] = {
     identity, identity, identity};
@@ -123,6 +123,53 @@ TEST(JobValidity, BlendingJob) {
     EXPECT_FALSE(job.Validate());
     EXPECT_FALSE(job.Run());
   }
+  {  // Invalid layer input range, too small.
+    BlendingJob::Layer invalid_layers[2];
+    invalid_layers[0].transform.begin = input_transforms;
+    invalid_layers[0].transform.end = input_transforms + 1;
+    invalid_layers[1].transform.begin = input_transforms;
+    invalid_layers[1].transform.end = input_transforms + 2;
+
+    BlendingJob job;
+    job.layers.begin = invalid_layers;
+    job.layers.end = invalid_layers + 2;
+    job.bind_pose.begin = bind_poses;
+    job.bind_pose.end = bind_poses + 2;
+    job.output.begin = output_transforms;
+    job.output.end = output_transforms + 2;
+    EXPECT_FALSE(job.Validate());
+    EXPECT_FALSE(job.Run());
+  }
+  {  // Invalid layer input range, NULL.
+    BlendingJob::Layer invalid_layers[1];
+    invalid_layers[0].transform.begin = NULL;
+    invalid_layers[0].transform.end = input_transforms + 2;
+
+    BlendingJob job;
+    job.layers.begin = invalid_layers;
+    job.layers.end = invalid_layers + 1;
+    job.bind_pose.begin = bind_poses;
+    job.bind_pose.end = bind_poses + 2;
+    job.output.begin = output_transforms;
+    job.output.end = output_transforms + 2;
+    EXPECT_FALSE(job.Validate());
+    EXPECT_FALSE(job.Run());
+  }
+  {  // Invalid layer input range, NULL.
+    BlendingJob::Layer invalid_layers[1];
+    invalid_layers[0].transform.begin = input_transforms;
+    invalid_layers[0].transform.end = NULL;
+
+    BlendingJob job;
+    job.layers.begin = invalid_layers;
+    job.layers.end = invalid_layers + 1;
+    job.bind_pose.begin = bind_poses;
+    job.bind_pose.end = bind_poses + 2;
+    job.output.begin = output_transforms;
+    job.output.end = output_transforms + 2;
+    EXPECT_FALSE(job.Validate());
+    EXPECT_FALSE(job.Run());
+  }
   {  // Invalid output range.
     BlendingJob job;
     job.layers.begin = layers;
@@ -131,17 +178,6 @@ TEST(JobValidity, BlendingJob) {
     job.bind_pose.end = bind_poses + 2;
     job.output.begin = output_transforms + 1;
     job.output.end = output_transforms;
-    EXPECT_FALSE(job.Validate());
-    EXPECT_FALSE(job.Run());
-  }
-  {  // Invalid output range, smaller output.
-    BlendingJob job;
-    job.layers.begin = layers;
-    job.layers.end = layers + 2;
-    job.bind_pose.begin = bind_poses;
-    job.bind_pose.end = bind_poses + 2;
-    job.output.begin = output_transforms;
-    job.output.end = output_transforms + 1;
     EXPECT_FALSE(job.Validate());
     EXPECT_FALSE(job.Run());
   }
@@ -169,7 +205,7 @@ TEST(JobValidity, BlendingJob) {
     EXPECT_FALSE(job.Run());
   }
 
-  {  // Invalid threasold.
+  {  // Invalid threshold.
     BlendingJob job;
     job.threshold = 0.f;
     job.layers.begin = layers;
@@ -269,6 +305,110 @@ TEST(JobValidity, BlendingJob) {
     job.output.end = output_transforms + 3;
     EXPECT_TRUE(job.Validate());
     EXPECT_TRUE(job.Run());
+  }
+}
+
+TEST(JobValidityAdditive, BlendingJob) {
+  const ozz::math::SoaTransform identity = ozz::math::SoaTransform::identity();
+  //const ozz::math::SimdFloat4 zero = ozz::math::simd_float4::zero();
+  BlendingJob::Layer layers[2];
+  BlendingJob::Layer additive_layers[2];
+
+  const ozz::math::SoaTransform bind_poses[3] = {
+    identity, identity, identity};
+  const ozz::math::SoaTransform input_transforms[3] = {
+    identity, identity, identity};
+  ozz::math::SoaTransform output_transforms[3] = {
+    identity, identity, identity};
+//  ozz::math::SimdFloat4 joint_weights[3] = {
+//    zero, zero, zero};
+
+  layers[0].transform.begin = input_transforms;
+  layers[0].transform.end = input_transforms + 3;
+  layers[1].transform.begin = input_transforms;
+  layers[1].transform.end = input_transforms + 3;
+
+  additive_layers[0].transform.begin = input_transforms;
+  additive_layers[0].transform.end = input_transforms + 3;
+  additive_layers[1].transform.begin = input_transforms;
+  additive_layers[1].transform.end = input_transforms + 3;
+
+  {  // Valid additive job, with normal blending also.
+
+    BlendingJob job;
+    job.layers.begin = layers;
+    job.layers.end = layers + 2;
+    job.additive_layers.begin = additive_layers;
+    job.additive_layers.end = additive_layers + 2;
+    job.bind_pose.begin = bind_poses;
+    job.bind_pose.end = bind_poses + 3;
+    job.output.begin = output_transforms;
+    job.output.end = output_transforms + 3;
+    EXPECT_TRUE(job.Validate());
+    EXPECT_TRUE(job.Run());
+  }
+
+  {  // Invalid additive job, no normal blending.
+
+    BlendingJob job;
+    job.additive_layers.begin = additive_layers;
+    job.additive_layers.end = additive_layers + 2;
+    job.bind_pose.begin = bind_poses;
+    job.bind_pose.end = bind_poses + 3;
+    job.output.begin = output_transforms;
+    job.output.end = output_transforms + 3;
+    EXPECT_FALSE(job.Validate());
+    EXPECT_FALSE(job.Run());
+  }
+
+  {  // Invalid additive range.
+
+    BlendingJob job;
+    job.layers.begin = layers;
+    job.layers.end = layers + 2;
+    job.additive_layers.begin = additive_layers + 2;
+    job.additive_layers.end = additive_layers;
+    job.bind_pose.begin = bind_poses;
+    job.bind_pose.end = bind_poses + 3;
+    job.output.begin = output_transforms;
+    job.output.end = output_transforms + 3;
+    EXPECT_FALSE(job.Validate());
+    EXPECT_FALSE(job.Run());
+  }
+
+  {  // Invalid additive range (NULL).
+
+    BlendingJob job;
+    job.layers.begin = layers;
+    job.layers.end = layers + 2;
+    job.additive_layers.begin = additive_layers;
+    job.additive_layers.end = NULL;
+    job.bind_pose.begin = bind_poses;
+    job.bind_pose.end = bind_poses + 3;
+    job.output.begin = output_transforms;
+    job.output.end = output_transforms + 3;
+    EXPECT_FALSE(job.Validate());
+    EXPECT_FALSE(job.Run());
+  }
+
+  {  // Invalid layer input range, too small.
+    BlendingJob::Layer invalid_layers[2];
+    invalid_layers[0].transform.begin = input_transforms;
+    invalid_layers[0].transform.end = input_transforms + 1;
+    invalid_layers[1].transform.begin = input_transforms;
+    invalid_layers[1].transform.end = input_transforms + 2;
+
+    BlendingJob job;
+    job.layers.begin = layers;
+    job.layers.end = layers + 2;
+    job.additive_layers.begin = invalid_layers;
+    job.additive_layers.end = invalid_layers + 2;
+    job.bind_pose.begin = bind_poses;
+    job.bind_pose.end = bind_poses + 2;
+    job.output.begin = output_transforms;
+    job.output.end = output_transforms + 2;
+    EXPECT_FALSE(job.Validate());
+    EXPECT_FALSE(job.Run());
   }
 }
 

@@ -412,6 +412,52 @@ TEST(JobValidityAdditive, BlendingJob) {
   }
 }
 
+TEST(Empty, BlendingJob) {
+  const ozz::math::SoaTransform identity = ozz::math::SoaTransform::identity();
+
+  // Initialize bind pose.
+  ozz::math::SoaTransform bind_poses[2] = {
+    identity, identity};
+  bind_poses[0].translation = ozz::math::SoaFloat3::Load(
+    ozz::math::simd_float4::Load(0.f, 1.f, 2.f, 3.f),
+    ozz::math::simd_float4::Load(4.f, 5.f, 6.f, 7.f),
+    ozz::math::simd_float4::Load(8.f, 9.f, 10.f, 11.f));
+  bind_poses[0].scale = ozz::math::SoaFloat3::Load(
+    ozz::math::simd_float4::Load(0.f, 10.f, 20.f, 30.f),
+    ozz::math::simd_float4::Load(40.f, 50.f, 60.f, 70.f),
+    ozz::math::simd_float4::Load(80.f, 90.f, 100.f, 110.f));
+  bind_poses[1].translation =
+    bind_poses[0].translation * ozz::math::simd_float4::Load(2.f, 2.f, 2.f, 2.f); 
+  bind_poses[1].scale =
+    bind_poses[0].scale * ozz::math::simd_float4::Load(2.f, 2.f, 2.f, 2.f);
+
+  BlendingJob job;
+  job.bind_pose.begin = bind_poses;
+  job.bind_pose.end = bind_poses + 2;
+  ozz::math::SoaTransform output_transforms[2];
+  job.output.begin = output_transforms;
+  job.output.end = output_transforms + 2;
+
+  EXPECT_TRUE(job.Run());
+
+  EXPECT_SOAFLOAT3_EQ(output_transforms[0].translation,
+                      0.f, 1.f, 2.f, 3.f,
+                      4.f, 5.f, 6.f, 7.f,
+                      8.f, 9.f, 10.f, 11.f);
+  EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
+                      0.f, 10.f, 20.f, 30.f,
+                      40.f, 50.f, 60.f, 70.f,
+                      80.f, 90.f, 100.f, 110.f);
+  EXPECT_SOAFLOAT3_EQ(output_transforms[1].translation,
+                      0.f, 2.f, 4.f, 6.f,
+                      8.f, 10.f, 12.f, 14.f,
+                      16.f, 18.f, 20.f, 22.f);
+  EXPECT_SOAFLOAT3_EQ(output_transforms[1].scale,
+                      0.f, 20.f, 40.f, 60.f,
+                      80.f, 100.f, 120.f, 140.f,
+                      160.f, 180.f, 200.f, 220.f);
+}
+
 TEST(Weight, BlendingJob) {
   const ozz::math::SoaTransform identity = ozz::math::SoaTransform::identity();
 

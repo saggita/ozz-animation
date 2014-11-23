@@ -98,7 +98,7 @@ bool BlendingJob::Validate() const {
   for (const Layer* layer = layers.begin;
        layers.begin && layer < layers.end;
        ++layer) {
-    valid &= ValidateLayer(*layer, min_range );
+    valid &= ValidateLayer(*layer, min_range);
   }
 
   // Test additive layers range is valid (implicitly test for NULL end pointers).
@@ -143,7 +143,7 @@ namespace {
   _out->scale = _out->scale + _in.scale * _simd_weight; \
 }
 
-// Defines parameters that are exchanged accross blending stages.
+// Defines parameters that are exchanged across blending stages.
 struct ProcessArgs {
   ProcessArgs(const BlendingJob& _job)
     : job(_job),

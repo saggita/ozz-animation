@@ -80,12 +80,10 @@ bool BlendingJob::Validate() const {
 
   // Test for NULL begin pointers.
   // Blending layers are mandatory, additive aren't.
-  valid &= layers.begin != NULL;
   valid &= bind_pose.begin != NULL;
   valid &= output.begin != NULL;
 
   // Test ranges are valid (implicitly test for NULL end pointers).
-  valid &= layers.end >= layers.begin;
   valid &= bind_pose.end >= bind_pose.begin;
   valid &= output.end >= output.begin;
 
@@ -94,6 +92,13 @@ bool BlendingJob::Validate() const {
   const ptrdiff_t min_range = bind_pose.end - bind_pose.begin;
   valid &= output.end - output.begin >= min_range;
 
+  // Blend layers are optional.
+  if (layers.begin != NULL) {
+    valid &= layers.end >= layers.begin;
+  } else {
+    valid &= layers.end == NULL;
+  }
+
   // Validates layers.
   for (const Layer* layer = layers.begin;
        layers.begin && layer < layers.end;
@@ -101,8 +106,12 @@ bool BlendingJob::Validate() const {
     valid &= ValidateLayer(*layer, min_range);
   }
 
-  // Test additive layers range is valid (implicitly test for NULL end pointers).
-  valid &= additive_layers.end >= additive_layers.begin;
+  // Additive layers are optional.
+  if (additive_layers.begin != NULL) {
+    valid &= additive_layers.end >= additive_layers.begin;
+  } else {
+    valid &= additive_layers.end == NULL;
+  }
 
   // Validates additive layers.
   for (const Layer* layer = additive_layers.begin;
@@ -271,24 +280,25 @@ void BlendBindPose(ProcessArgs* _args) {
          _args->job.bind_pose.begin + _args->num_soa_joints);
 
   if (_args->num_partial_passes == 0) {
-    // No partial blending pass detected, threshold can be tested globaly.
+    // No partial blending pass detected, threshold can be tested globally.
     const float bp_weight =
       _args->job.threshold - _args->accumulated_weight;
 
-    if (bp_weight > 0.f) {  // The bind pose is needed if it has a weight.
-      const math::SimdFloat4 simd_bp_weight =
-        math::simd_float4::Load1(bp_weight);
-
-      // Updates global accumulated weight, but not per-joint weight any more
-      // because normalization stage will be global also.
-      _args->accumulated_weight = _args->job.threshold;
+    if (bp_weight > 0.f) {  // The bind-pose is needed if it has a weight.
       if (_args->num_passes == 0) {
+        // Strictly copying bind-pose.
+        _args->accumulated_weight = 1.f;
         for (size_t i = 0; i < _args->num_soa_joints; ++i) {
-          const math::SoaTransform& src = _args->job.bind_pose.begin[i];
-          math::SoaTransform* dest = _args->job.output.begin + i;
-          OZZ_BLEND_1ST_PASS(src, simd_bp_weight, dest);
+          _args->job.output.begin[i] = _args->job.bind_pose.begin[i];
         }
       } else {
+        // Updates global accumulated weight, but not per-joint weight any more
+        // because normalization stage will be global also.
+        _args->accumulated_weight = _args->job.threshold;
+
+        const math::SimdFloat4 simd_bp_weight =
+          math::simd_float4::Load1(bp_weight);
+
         for (size_t i = 0; i < _args->num_soa_joints; ++i) {
           const math::SoaTransform& src = _args->job.bind_pose.begin[i];
           math::SoaTransform* dest = _args->job.output.begin + i;

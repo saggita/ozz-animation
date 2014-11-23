@@ -70,15 +70,6 @@ TEST(JobValidity, BlendingJob) {
     EXPECT_FALSE(job.Validate());
     EXPECT_FALSE(job.Run());
   }
-  {  // Invalid NULL input.
-    BlendingJob job;
-    job.bind_pose.begin = bind_poses;
-    job.bind_pose.end = bind_poses + 2;
-    job.output.begin = output_transforms;
-    job.output.end = output_transforms + 2;
-    EXPECT_FALSE(job.Validate());
-    EXPECT_FALSE(job.Run());
-  }
   {  // Invalid NULL input begin.
     BlendingJob job;
     job.layers.end = layers + 2;
@@ -306,6 +297,16 @@ TEST(JobValidity, BlendingJob) {
     EXPECT_TRUE(job.Validate());
     EXPECT_TRUE(job.Run());
   }
+
+  {  // Valid no layers.
+    BlendingJob job;
+    job.bind_pose.begin = bind_poses;
+    job.bind_pose.end = bind_poses + 2;
+    job.output.begin = output_transforms;
+    job.output.end = output_transforms + 2;
+    EXPECT_TRUE(job.Validate());
+    EXPECT_TRUE(job.Run());
+  }
 }
 
 TEST(JobValidityAdditive, BlendingJob) {
@@ -333,6 +334,18 @@ TEST(JobValidityAdditive, BlendingJob) {
   additive_layers[1].transform.begin = input_transforms;
   additive_layers[1].transform.end = input_transforms + 3;
 
+  {  // Valid additive job, no normal blending.
+    BlendingJob job;
+    job.additive_layers.begin = additive_layers;
+    job.additive_layers.end = additive_layers + 2;
+    job.bind_pose.begin = bind_poses;
+    job.bind_pose.end = bind_poses + 3;
+    job.output.begin = output_transforms;
+    job.output.end = output_transforms + 3;
+    EXPECT_TRUE(job.Validate());
+    EXPECT_TRUE(job.Run());
+  }
+
   {  // Valid additive job, with normal blending also.
 
     BlendingJob job;
@@ -346,19 +359,6 @@ TEST(JobValidityAdditive, BlendingJob) {
     job.output.end = output_transforms + 3;
     EXPECT_TRUE(job.Validate());
     EXPECT_TRUE(job.Run());
-  }
-
-  {  // Invalid additive job, no normal blending.
-
-    BlendingJob job;
-    job.additive_layers.begin = additive_layers;
-    job.additive_layers.end = additive_layers + 2;
-    job.bind_pose.begin = bind_poses;
-    job.bind_pose.end = bind_poses + 3;
-    job.output.begin = output_transforms;
-    job.output.end = output_transforms + 3;
-    EXPECT_FALSE(job.Validate());
-    EXPECT_FALSE(job.Run());
   }
 
   {  // Invalid additive range.

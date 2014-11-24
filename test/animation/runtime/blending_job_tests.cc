@@ -830,9 +830,8 @@ TEST(Normalize, BlendingJob) {
       ozz::math::simd_float4::Load(10.f, 15.f, 20.f, 25.f),
       ozz::math::simd_float4::Load(30.f, 35.f, 40.f, 45.f),
       ozz::math::simd_float4::Load(50.f, 55.f, 60.f, 65.f));
-    ozz::math::SimdFloat4 joint_weights[2] = {
-      ozz::math::simd_float4::Load(1.f, -1.f, 2.f, .1f),
-      ozz::math::simd_float4::one()};
+    ozz::math::SimdFloat4 joint_weights[1] = {
+      ozz::math::simd_float4::Load(1.f, -1.f, 2.f, .1f)};
 
     BlendingJob::Layer layers[2];
     layers[0].weight = 2.f;
@@ -1013,7 +1012,7 @@ TEST(AdditiveWeight, BlendingJob) {
                         2.f, 2.5f, 3.f, 3.5f,
                         4.f, 4.5f, 5.f, 5.5f);
     EXPECT_SOAQUATERNION_EQ_EST(output_transforms[0].rotation,
- !!!!!!!                               .70710677f, 0.f, 0.f, .382683432f,
+                                .70710677f, 0.f, 0.f, .382683432f,
                                 0.f, 0.f, .70710677f, 0.f,
                                 0.f, 0.f, 0.f, 0.f,
                                 .70710677f, 1.f, .70710677f, .9238795f);

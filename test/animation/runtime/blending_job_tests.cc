@@ -1012,10 +1012,10 @@ TEST(AdditiveWeight, BlendingJob) {
                         2.f, 2.5f, 3.f, 3.5f,
                         4.f, 4.5f, 5.f, 5.5f);
     EXPECT_SOAQUATERNION_EQ_EST(output_transforms[0].rotation,
-                                .70710677f, 0.f, 0.f, .382683432f,
-                                0.f, 0.f, .70710677f, 0.f,
+                                .9238795f, 0.f, 0.f, .19509032f,
+                                0.f, 0.f, .3826834f, 0.f,
                                 0.f, 0.f, 0.f, 0.f,
-                                .70710677f, 1.f, .70710677f, .9238795f);
+                                -.3826834f, 1.f, .9238795f, .98078528f);
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
                         7.f, 7.5f, 8.f, 8.5f,
                         9.f, 9.5f, 10.f, 10.5f,
@@ -1159,10 +1159,10 @@ TEST(AdditiveJointWeight, BlendingJob) {
                         2.f, 1.25f, 0.f, 0.f,
                         4.f, 2.25f, 0.f, 0.f);
     EXPECT_SOAQUATERNION_EQ_EST(output_transforms[0].rotation,
-                                .70710677f, 0.f, 0.f, 0.f,
+                                .9238795f, 0.f, 0.f, 0.f,
                                 0.f, 0.f, 0.f, 0.f,
                                 0.f, 0.f, 0.f, 0.f,
-                                .70710677f, 1.f, 0.f, 0.f);
+                                -.3826834f, 1.f, 0.f, 0.f);
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
                         7.f, 4.25f, 1.f, 1.f,
                         9.f, 5.25f, 1.f, 1.f,

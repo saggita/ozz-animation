@@ -984,81 +984,118 @@ TEST(Threshold, BlendingJob) {
                         8.f, 9.f, 10.f, 11.f);
   }
 }
-
 /*
 TEST(AdditiveWeight, BlendingJob) {
   const ozz::math::SoaTransform identity = ozz::math::SoaTransform::identity();
 
   // Initialize inputs.
-  ozz::math::SoaTransform input_transforms[2][2] = {
-    {identity, identity},
-    {identity, identity}};
+  ozz::math::SoaTransform input_transforms[2][1] = {
+    {identity},
+    {identity}};
   input_transforms[0][0].translation = ozz::math::SoaFloat3::Load(
     ozz::math::simd_float4::Load(0.f, 1.f, 2.f, 3.f),
     ozz::math::simd_float4::Load(4.f, 5.f, 6.f, 7.f),
     ozz::math::simd_float4::Load(8.f, 9.f, 10.f, 11.f));
-  input_transforms[0][1].translation = ozz::math::SoaFloat3::Load(
+  input_transforms[0][0].rotation = ozz::math::SoaQuaternion::Load(
+    ozz::math::simd_float4::Load(.70710677f, 0.f, 0.f, .382683432f),
+    ozz::math::simd_float4::Load(0.f, 0.f, .70710677f, 0.f),
+    ozz::math::simd_float4::Load(0.f, 0.f, 0.f, 0.f),
+    ozz::math::simd_float4::Load(.70710677f, 1.f, .70710677f, .9238795f));
+  input_transforms[0][0].scale = ozz::math::SoaFloat3::Load(
     ozz::math::simd_float4::Load(12.f, 13.f, 14.f, 15.f),
     ozz::math::simd_float4::Load(16.f, 17.f, 18.f, 19.f),
     ozz::math::simd_float4::Load(20.f, 21.f, 22.f, 23.f));
   input_transforms[1][0].translation = -input_transforms[0][0].translation;
-  input_transforms[1][1].translation = -input_transforms[0][1].translation;
+  input_transforms[1][0].rotation = Conjugate(input_transforms[0][0].rotation);
+  input_transforms[1][0].scale = -input_transforms[0][0].scale;
 
   // Initialize bind pose.
-  ozz::math::SoaTransform bind_poses[2] = {identity, identity};
+  ozz::math::SoaTransform bind_poses[1] = {identity};
 
   {
     BlendingJob::Layer layers[1];
     layers[0].transform.begin = input_transforms[0];
-    layers[0].transform.end = input_transforms[0] + 2;
+    layers[0].transform.end = input_transforms[0] + 1;
 
     BlendingJob job;
     job.additive_layers.begin = layers;
     job.additive_layers.end = layers + 1;
     job.bind_pose.begin = bind_poses;
-    job.bind_pose.end = bind_poses + 2;
-    ozz::math::SoaTransform output_transforms[2];
+    job.bind_pose.end = bind_poses + 1;
+    ozz::math::SoaTransform output_transforms[1];
     job.output.begin = output_transforms;
-    job.output.end = output_transforms + 2;
+    job.output.end = output_transforms + 1;
 
     // No weight for the 1st layer.
-    layers[0].weight = .5f;
+    layers[0].weight = 0.f;
+    EXPECT_TRUE(job.Run());
 
+    EXPECT_SOAFLOAT3_EQ(output_transforms[0].translation,
+                        0.f, 0.f, 0.f, 0.f,
+                        0.f, 0.f, 0.f, 0.f,
+                        0.f, 0.f, 0.f, 0.f);
+    EXPECT_SOAQUATERNION_EQ_EST(output_transforms[0].rotation,
+                                0.f, 0.f, 0.f, 0.f,
+                                0.f, 0.f, 0.f, 0.f,
+                                0.f, 0.f, 0.f, 0.f,
+                                1.f, 1.f, 1.f, 1.f);
+    EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
+                        1.f, 1.f, 1.f, 1.f,
+                        1.f, 1.f, 1.f, 1.f,
+                        1.f, 1.f, 1.f, 1.f);
+
+    // .5 weight for the 1st layer.
+    layers[0].weight = .5f;
+    EXPECT_TRUE(job.Run());
+
+    EXPECT_SOAFLOAT3_EQ(output_transforms[0].translation,
+                        0.f, 1.f, 2.f, 3.f,
+                        4.f, 5.f, 6.f, 7.f,
+                        8.f, 9.f, 10.f, 11.f);
+    EXPECT_SOAQUATERNION_EQ_EST(output_transforms[0].rotation,
+                                .70710677f, 0.f, 0.f, .382683432f,
+                                0.f, 0.f, .70710677f, 0.f,
+                                0.f, 0.f, 0.f, 0.f,
+                                .70710677f, 1.f, .70710677f, .9238795f);
+    EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
+                        7.f, 7.5f, 8.f, 8.5f,
+                        9.f, 9.5f, 10.f, 10.5f,
+                        11.f, 11.5f, 12.f, 12.5f);
+
+    // Full weight for the 1st layer.
+    layers[0].weight = 1.f;
     EXPECT_TRUE(job.Run());
 
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].translation,
                         0.f, .5f, 1.f, 1.5f,
                         2.f, 2.5f, 3.f, 3.5f,
                         4.f, 4.5f, 5.f, 5.5f);
+    EXPECT_SOAQUATERNION_EQ_EST(output_transforms[0].rotation,
+                                .70710677f, 0.f, 0.f, .382683432f,
+                                0.f, 0.f, .70710677f, 0.f,
+                                0.f, 0.f, 0.f, 0.f,
+                                .70710677f, 1.f, .70710677f, .9238795f);
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
-                        1.f, 1.f, 1.f, 1.f,
-                        1.f, 1.f, 1.f, 1.f,
-                        1.f, 1.f, 1.f, 1.f);
-    EXPECT_SOAFLOAT3_EQ(output_transforms[1].translation,
-                        6.f, 6.5f, 7.f, 7.5f,
-                        8.f, 8.5f, 9.f, 9.5f,
-                        10.f, 10.5f, 11.f, 11.5f);
-    EXPECT_SOAFLOAT3_EQ(output_transforms[1].scale,
-                        1.f, 1.f, 1.f, 1.f,
-                        1.f, 1.f, 1.f, 1.f,
-                        1.f, 1.f, 1.f, 1.f);
+                        13.f, 14.f, 15.f, 16.f,
+                        17.f, 18.f, 19.f, 20.f,
+                        21.f, 22.f, 23.f, 24.f);
   }
 
   {
     BlendingJob::Layer layers[2];
     layers[0].transform.begin = input_transforms[0];
-    layers[0].transform.end = input_transforms[0] + 2;
+    layers[0].transform.end = input_transforms[0] + 1;
     layers[1].transform.begin = input_transforms[1];
-    layers[1].transform.end = input_transforms[1] + 2;
+    layers[1].transform.end = input_transforms[1] + 1;
 
     BlendingJob job;
     job.additive_layers.begin = layers;
     job.additive_layers.end = layers + 2;
     job.bind_pose.begin = bind_poses;
     job.bind_pose.end = bind_poses + 2;
-    ozz::math::SoaTransform output_transforms[2];
+    ozz::math::SoaTransform output_transforms[1];
     job.output.begin = output_transforms;
-    job.output.end = output_transforms + 2;
+    job.output.end = output_transforms + 1;
 
     // No weight for the 1st layer.
     layers[0].weight = 0.f;
@@ -1067,18 +1104,35 @@ TEST(AdditiveWeight, BlendingJob) {
     EXPECT_TRUE(job.Run());
 
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].translation,
-                        -0.f, -1.f, -2.f, -3.f,
-                        -4.f, -5.f, -6.f, -7.f,
-                        -8.f, -9.f, -10.f, -11.f);
+                        -0.f, -.5f, -1.f, -1.5f,
+                        -2.f, -2.5f, -3.f, -3.5f,
+                        -4.f, -4.5f, -5.f, -5.5f);
+    EXPECT_SOAQUATERNION_EQ_EST(output_transforms[0].rotation,
+                                -.70710677f, -0.f, -0.f, -.382683432f,
+                                -0.f, -0.f, -.70710677f, -0.f,
+                                -0.f, -0.f, -0.f, -0.f,
+                                .70710677f, 1.f, .70710677f, .9238795f);
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
-                        1.f, 1.f, 1.f, 1.f,
-                        1.f, 1.f, 1.f, 1.f,
-                        1.f, 1.f, 1.f, 1.f);
-    EXPECT_SOAFLOAT3_EQ(output_transforms[1].translation,
-                        -12.f, -13.f, -14.f, -15.f,
-                        -16.f, -17.f, -18.f, -19.f,
-                        -20.f, -21.f, -22.f, -23.f);
-    EXPECT_SOAFLOAT3_EQ(output_transforms[1].scale,
+                        -11.f, -12.f, -13.f, -14.f,
+                        -15.f, -16.f, -17.f, -18.f,
+                        -19.f, -20.f, -21.f, -22.f);
+
+    // Full weight for the both layer.
+    layers[0].weight = 1.f;
+    layers[1].weight = 1.f;
+
+    EXPECT_TRUE(job.Run());
+
+    EXPECT_SOAFLOAT3_EQ(output_transforms[0].translation,
+                        0.f, 0.f, 0.f, 0.f,
+                        0.f, 0.f, 0.f, 0.f,
+                        0.f, 0.f, 0.f, 0.f);
+    EXPECT_SOAQUATERNION_EQ_EST(output_transforms[0].rotation,
+                                0.f, 0.f, 0.f, 0.f,
+                                0.f, 0.f, 0.f, 0.f,
+                                0.f, 0.f, 0.f, 0.f,
+                                1.f, 1.f, 1.f, 1.f);
+    EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
                         1.f, 1.f, 1.f, 1.f,
                         1.f, 1.f, 1.f, 1.f,
                         1.f, 1.f, 1.f, 1.f);

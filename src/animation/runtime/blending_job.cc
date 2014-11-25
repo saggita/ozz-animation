@@ -382,20 +382,21 @@ void AddLayers(ProcessArgs* _args) {
       // This layer has per-joint weights.
       for (size_t i = 0; i < _args->num_soa_joints; ++i) {
         const math::SoaTransform& src = layer->transform.begin[i];
-        math::SoaTransform* dest = _args->job.output.begin + i;
+        math::SoaTransform& dest = _args->job.output.begin[i];
       }
     } else {
       // This is a full layer.
+      const math::SimdFloat4 one_minus_weight = one - layer_weight;
+      const math::SoaFloat3 one_minus_weight_f3 = {
+        one_minus_weight, one_minus_weight, one_minus_weight};
+        
       for (size_t i = 0; i < _args->num_soa_joints; ++i) {
         const math::SoaTransform& src = layer->transform.begin[i];
-        math::SoaTransform* dest = _args->job.output.begin + i;
-        const math::SimdFloat4 one_minus_weight = one - layer_weight;
-        dest->translation = dest->translation + src.translation * layer_weight;
-        dest->rotation = 
-          NLerpEst(math::SoaQuaternion::identity(), src.rotation, layer_weight) * dest->rotation;
-        const math::SoaFloat3 one_minus_weights = {
-          one_minus_weight, one_minus_weight, one_minus_weight};
-        dest->scale = dest->scale * (one_minus_weights + (src.scale * layer_weight));
+        math::SoaTransform& dest = _args->job.output.begin[i];
+        dest.translation = dest.translation + src.translation * layer_weight;
+        dest.rotation = 
+          NLerpEst(math::SoaQuaternion::identity(), src.rotation, layer_weight) * dest.rotation;
+        dest.scale = dest.scale * (one_minus_weight_f3 + (src.scale * layer_weight));
       }
     }
   }

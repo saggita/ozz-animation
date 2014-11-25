@@ -390,12 +390,12 @@ void AddLayers(ProcessArgs* _args) {
         const math::SoaTransform& src = layer->transform.begin[i];
         math::SoaTransform* dest = _args->job.output.begin + i;
         const math::SimdFloat4 one_minus_weight = one - layer_weight;
-        dest->translation = dest->translation + src.translation * weight;
+        dest->translation = dest->translation + src.translation * layer_weight;
         dest->rotation = 
-          NLerpEst(math::SoaQuaternion::identity(), src.rotation, weight) * dest->rotation;
+          NLerpEst(math::SoaQuaternion::identity(), src.rotation, layer_weight) * dest->rotation;
         const math::SoaFloat3 one_minus_weights = {
           one_minus_weight, one_minus_weight, one_minus_weight};
-        dest->scale = dest->scale * (one_minus_weights + (src.scale * weight));
+        dest->scale = dest->scale * (one_minus_weights + (src.scale * layer_weight));
       }
     }
   }

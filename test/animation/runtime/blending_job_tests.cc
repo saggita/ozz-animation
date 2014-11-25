@@ -946,7 +946,7 @@ TEST(Threshold, BlendingJob) {
                         8.f, 9.f, 10.f, 11.f);
   }
 }
-/*
+
 TEST(AdditiveWeight, BlendingJob) {
   const ozz::math::SoaTransform identity = ozz::math::SoaTransform::identity();
 
@@ -1017,27 +1017,27 @@ TEST(AdditiveWeight, BlendingJob) {
                                 0.f, 0.f, 0.f, 0.f,
                                 -.3826834f, 1.f, .9238795f, .98078528f);
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
-                        7.f, 7.5f, 8.f, 8.5f,
-                        9.f, 9.5f, 10.f, 10.5f,
-                        11.f, 11.5f, 12.f, 12.5f);
+                        6.5f, 7.f, 7.5f, 8.f,
+                        8.5f, 9.f, 9.5f, 10.f,
+                        10.5f, 11.f, 11.5f, 12.f);
 
     // Full weight for the 1st layer.
     layers[0].weight = 1.f;
     EXPECT_TRUE(job.Run());
 
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].translation,
-                        0.f, .5f, 1.f, 1.5f,
-                        2.f, 2.5f, 3.f, 3.5f,
-                        4.f, 4.5f, 5.f, 5.5f);
+                        0.f, 1.f, 2.f, 3.f,
+                        4.f, 5.f, 6.f, 7.f,
+                        8.f, 9.f, 10.f, 11.f);
     EXPECT_SOAQUATERNION_EQ_EST(output_transforms[0].rotation,
                                 .70710677f, 0.f, 0.f, .382683432f,
                                 0.f, 0.f, .70710677f, 0.f,
                                 0.f, 0.f, 0.f, 0.f,
                                 .70710677f, 1.f, .70710677f, .9238795f);
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
-                        13.f, 14.f, 15.f, 16.f,
-                        17.f, 18.f, 19.f, 20.f,
-                        21.f, 22.f, 23.f, 24.f);
+                        12.f, 13.f, 14.f, 15.f,
+                        16.f, 17.f, 18.f, 19.f,
+                        20.f, 21.f, 22.f, 23.f);
   }
 
   {
@@ -1059,18 +1059,18 @@ TEST(AdditiveWeight, BlendingJob) {
     EXPECT_TRUE(job.Run());
 
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].translation,
-                        -0.f, -.5f, -1.f, -1.5f,
-                        -2.f, -2.5f, -3.f, -3.5f,
-                        -4.f, -4.5f, -5.f, -5.5f);
+                        -0.f, -1.f, -2.f, -3.f,
+                        -4.f, -5.f, -6.f, -7.f,
+                        -8.f, -9.f, -10.f, -11.f);
     EXPECT_SOAQUATERNION_EQ_EST(output_transforms[0].rotation,
                                 -.70710677f, -0.f, -0.f, -.382683432f,
                                 -0.f, -0.f, -.70710677f, -0.f,
                                 -0.f, -0.f, -0.f, -0.f,
                                 .70710677f, 1.f, .70710677f, .9238795f);
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
-                        -11.f, -12.f, -13.f, -14.f,
-                        -15.f, -16.f, -17.f, -18.f,
-                        -19.f, -20.f, -21.f, -22.f);
+                        -12.f, -13.f, -14.f, -15.f,
+                        -16.f, -17.f, -18.f, -19.f,
+                        -20.f, -21.f, -22.f, -23.f);
 
     // Full weight for the both layer.
     layers[0].weight = 1.f;
@@ -1088,12 +1088,12 @@ TEST(AdditiveWeight, BlendingJob) {
                                 0.f, 0.f, 0.f, 0.f,
                                 1.f, 1.f, 1.f, 1.f);
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
-                        1.f, 1.f, 1.f, 1.f,
-                        1.f, 1.f, 1.f, 1.f,
-                        1.f, 1.f, 1.f, 1.f);
+                        -144.f, -169.f, -196.f, -225.f,
+                        -256.f, -289.f, -324.f, -361.f,
+                        -400.f, -441.f, -484.f, -529.f);
   }
 }
-
+/*
 TEST(AdditiveJointWeight, BlendingJob) {
   const ozz::math::SoaTransform identity = ozz::math::SoaTransform::identity();
 
@@ -1164,9 +1164,9 @@ TEST(AdditiveJointWeight, BlendingJob) {
                                 0.f, 0.f, 0.f, 0.f,
                                 -.3826834f, 1.f, 0.f, 0.f);
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
-                        7.f, 4.25f, 1.f, 1.f,
-                        9.f, 5.25f, 1.f, 1.f,
-                        11.f, 6.25f, 1.f, 1.f);
+                        6.f, 1.75f, 1.f, 1.f,
+                        8.f, 2.25f, 1.f, 1.f,
+                        10.f, 2.75f, 1.f, 1.f);
 
     // Full weight for the 1st layer.
     layers[0].weight = 1.f;
@@ -1182,9 +1182,8 @@ TEST(AdditiveJointWeight, BlendingJob) {
                                 0.f, 0.f, 0.f, 0.f,
                                 .70710677f, 1.f, 0.f, 0.f);
     EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
-                        13.f, 7.5f, 1.f, 1.f,
-                        17.f, 9.5f, 1.f, 1.f,
-                        21.f, 11.5f, 1.f, 1.f);
+                        12.f, 6.5f, 1.f, 1.f,
+                        16.f, 8.5f, 1.f, 1.f,
+                        20.f, 10.5f, 1.f, 1.f);
   }
-}
-*/
+}*/

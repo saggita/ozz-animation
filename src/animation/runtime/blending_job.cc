@@ -357,6 +357,49 @@ void Normalize(ProcessArgs* _args) {
     }
   }
 }
+
+// Process additive blending pass.
+void AddLayers(ProcessArgs* _args) {
+  assert(_args);
+
+  // Iterates through all layers and blend them to the output.
+  for (const BlendingJob::Layer* layer = _args->job.additive_layers.begin;
+       layer < _args->job.additive_layers.end;
+       ++layer) {
+
+    // Asserts buffer sizes, which must never fail as it has been validated.
+    assert(layer->transform.end >=
+           layer->transform.begin + _args->num_soa_joints);
+    assert(!layer->joint_weights.begin ||
+           (layer->joint_weights.end >=
+            layer->joint_weights.begin + _args->num_soa_joints));
+
+    const math::SimdFloat4 layer_weight =
+      math::simd_float4::Load1(layer->weight);
+    const math::SimdFloat4 one = math::simd_float4::one(); 
+
+    if (layer->joint_weights.begin) {
+      // This layer has per-joint weights.
+      for (size_t i = 0; i < _args->num_soa_joints; ++i) {
+        const math::SoaTransform& src = layer->transform.begin[i];
+        math::SoaTransform* dest = _args->job.output.begin + i;
+      }
+    } else {
+      // This is a full layer.
+      for (size_t i = 0; i < _args->num_soa_joints; ++i) {
+        const math::SoaTransform& src = layer->transform.begin[i];
+        math::SoaTransform* dest = _args->job.output.begin + i;
+        const math::SimdFloat4 one_minus_weight = one - layer_weight;
+        dest->translation = dest->translation + src.translation * weight;
+        dest->rotation = 
+          NLerpEst(math::SoaQuaternion::identity(), src.rotation, weight) * dest->rotation;
+        const math::SoaFloat3 one_minus_weights = {
+          one_minus_weight, one_minus_weight, one_minus_weight};
+        dest->scale = dest->scale * (one_minus_weights + (src.scale * weight));
+      }
+    }
+  }
+}
 }  // namespace
 
 bool BlendingJob::Run() const {
@@ -375,6 +418,9 @@ bool BlendingJob::Run() const {
 
   // Normalizes output.
   Normalize(&process_args);
+
+  // Process additive blending.
+  AddLayers(&process_args);
 
   return true;
 }

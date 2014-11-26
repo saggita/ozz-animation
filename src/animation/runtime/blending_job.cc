@@ -414,11 +414,14 @@ void AddLayers(ProcessArgs* _args) {
            (layer->joint_weights.end >=
             layer->joint_weights.begin + _args->num_soa_joints));
 
+    // Prepares constants. 
     const math::SimdFloat4 one = math::simd_float4::one();
 
     if (layer->weight > 0.f) {
+      // Weight is positive, need to perform additive blending.
       const math::SimdFloat4 layer_weight =
         math::simd_float4::Load1(layer->weight);
+
       if (layer->joint_weights.begin) {
         // This layer has per-joint weights.
         for (size_t i = 0; i < _args->num_soa_joints; ++i) {
@@ -444,8 +447,10 @@ void AddLayers(ProcessArgs* _args) {
         }
       }
     } else if (layer->weight < 0.f) {
+      // Weight is negative, need to perform subtractive blending.
       const math::SimdFloat4 layer_weight =
         math::simd_float4::Load1(-layer->weight);
+
       if (layer->joint_weights.begin) {
         // This layer has per-joint weights.
         for (size_t i = 0; i < _args->num_soa_joints; ++i) {
@@ -482,7 +487,7 @@ bool BlendingJob::Run() const {
     return false;
   }
 
-  // Initializes blended parameters that are exchanged accross blend stages.
+  // Initializes blended parameters that are exchanged across blend stages.
   ProcessArgs process_args(*this);
 
   // Blends all layers to the job output buffers.

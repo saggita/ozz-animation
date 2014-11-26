@@ -1108,10 +1108,10 @@ TEST(AdditiveWeight, BlendingJob) {
                                 0.f, 0.f, 0.f, 0.f,
                                 0.f, 0.f, 0.f, 0.f,
                                 1.f, 1.f, 1.f, 1.f);
-    EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
-                        1.f, 1.f, 1.f, 1.f,
-                        1.f, 1.f, 1.f, 1.f,
-                        1.f, 1.f, 1.f, 1.f);
+    EXPECT_SOAFLOAT3_EQ_EST(output_transforms[0].scale,
+                            1.f, 1.f, 1.f, 1.f,
+                            1.f, 1.f, 1.f, 1.f,
+                            1.f, 1.f, 1.f, 1.f);
   }
 }
 
@@ -1221,9 +1221,9 @@ TEST(AdditiveJointWeight, BlendingJob) {
                                 0.f, 0.f, 0.f, 0.f,
                                 0.f, 0.f, 0.f, 0.f,
                                 .70710677f, 1.f, 1.f, 1.f);
-    EXPECT_SOAFLOAT3_EQ(output_transforms[0].scale,
-                        1.f/12.f, 1.f/7.f, 1.f, 1.f,
-                        1.f/16.f, 1.f/9.f, 1.f, 1.f,
-                        1.f/20.f, 1.f/11.f, 1.f, 1.f);
+    EXPECT_SOAFLOAT3_EQ_EST(output_transforms[0].scale,
+                            1.f/12.f, 1.f/7.f, 1.f, 1.f,
+                            1.f/16.f, 1.f/9.f, 1.f, 1.f,
+                            1.f/20.f, 1.f/11.f, 1.f, 1.f);
   }
 }

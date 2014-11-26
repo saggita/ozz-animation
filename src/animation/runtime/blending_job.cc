@@ -189,7 +189,12 @@ namespace {
     (rotation.w - one) * _simd_weight + one \
   }; \
   _out.rotation = Conjugate(NormalizeEst(interp_quat)) * _out.rotation; \
-  _out.scale = _out.scale / (one_minus_weight_f3 + (_in.scale * _simd_weight)); \
+  const math::SoaFloat3 rcp_scale = { \
+    math::RcpEst(one_minus_weight + (_in.scale.x * _simd_weight)), \
+    math::RcpEst(one_minus_weight + (_in.scale.y * _simd_weight)), \
+    math::RcpEst(one_minus_weight + (_in.scale.z * _simd_weight)) \
+  }; \
+  _out.scale = _out.scale * rcp_scale; \
 }
 
 // Defines parameters that are exchanged across blending stages.

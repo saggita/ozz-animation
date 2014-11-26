@@ -113,5 +113,4 @@ void Load(IArchive& _archive,
           uint32_t _version);
 }  // io
 }  // ozz
-
 #endif  // OZZ_SAMPLES_SKIN_SKIN_MESH_H_

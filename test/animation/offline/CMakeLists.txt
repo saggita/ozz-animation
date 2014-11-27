@@ -18,6 +18,16 @@ target_link_libraries(test_animation_optimizer
 set_target_properties(test_animation_optimizer PROPERTIES FOLDER "ozz/tests/animation_offline")
 add_test(NAME test_animation_optimizer COMMAND test_animation_optimizer)
 
+add_executable(test_animation_delta_builder
+  test_animation_delta_builder.cc)
+target_link_libraries(test_animation_delta_builder
+  ozz_animation_offline
+  ozz_animation
+  ozz_base
+  gtest)
+set_target_properties(test_animation_delta_builder PROPERTIES FOLDER "ozz/tests/animation_offline")
+add_test(NAME test_animation_delta_builder COMMAND test_animation_delta_builder)
+
 add_executable(test_skeleton_builder
   skeleton_builder_tests.cc)
 target_link_libraries(test_skeleton_builder

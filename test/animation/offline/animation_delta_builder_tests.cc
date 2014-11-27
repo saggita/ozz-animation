@@ -28,18 +28,17 @@
 //                                                                            //
 //============================================================================//
 
-#include "ozz/animation/offline/animation_optimizer.h"
+#include "ozz/animation/offline/animation_delta_builder.h"
 
 #include "gtest/gtest.h"
 
 #include "ozz/base/maths/math_constant.h"
 
 #include "ozz/animation/offline/raw_animation.h"
-#include "ozz/animation/offline/animation_builder.h"
 
 using ozz::animation::offline::RawAnimation;
 using ozz::animation::offline::AnimationOptimizer;
-
+/*
 TEST(Error, AnimationOptimizer) {
   AnimationOptimizer optimizer;
 
@@ -181,3 +180,4 @@ TEST(Optimize, AnimationOptimizer) {
     EXPECT_FLOAT_EQ(rotations[1].value.w, .9998477f);  // Track 0 end.
   }
 }
+*/

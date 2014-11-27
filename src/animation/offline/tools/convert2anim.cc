@@ -35,6 +35,7 @@
 
 #include "ozz/animation/offline/animation_builder.h"
 #include "ozz/animation/offline/animation_optimizer.h"
+#include "ozz/animation/offline/animation_delta_builder.h"
 #include "ozz/animation/offline/skeleton_builder.h"
 #include "ozz/animation/offline/raw_animation.h"
 #include "ozz/animation/offline/raw_skeleton.h"
@@ -53,6 +54,7 @@
 OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies ozz skeleton (raw or runtime) input file", "", true)
 OZZ_OPTIONS_DECLARE_STRING(animation, "Specifies ozz animation output file", "", true)
+OZZ_OPTIONS_DECLARE_BOOL(additive, "Creates a delta animation that can be used for additive blending.", false, false)
 
 OZZ_OPTIONS_DECLARE_FLOAT(
   rotation,
@@ -250,6 +252,19 @@ int AnimationConverter::operator()(int _argc, const char** _argv) {
     ozz::log::Err() << "Failed to import file \"" << OPTIONS_file << "\"" <<
       std::endl;
     return EXIT_FAILURE;
+  }
+
+  // Make delta animation if requested.
+  if (OPTIONS_additive) {
+    ozz::log::Log() << "Makes delta animation." << std::endl;
+    ozz::animation::offline::AnimationDeltaBuilder delta_builder;
+    RawAnimation delta;
+    if (!delta_builder(raw_animation, &delta)) {
+      ozz::log::Err() << "Failed to make delta animation." << std::endl;
+      return EXIT_FAILURE;
+    }
+    // Copy animation.
+    raw_animation = delta;
   }
 
   // Optimizes animation.

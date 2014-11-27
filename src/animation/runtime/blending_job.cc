@@ -464,16 +464,11 @@ void AddLayers(ProcessArgs* _args) {
           const math::SimdFloat4 weight =
             layer_weight * math::Max0(layer->joint_weights.begin[i]);
           const math::SimdFloat4 one_minus_weight = one - weight;
-          const math::SoaFloat3 one_minus_weight_f3 = {
-            one_minus_weight, one_minus_weight, one_minus_weight};
           OZZ_SUB_PASS(src, weight, dest);
         }
       } else {
         // This is a full layer.
         const math::SimdFloat4 one_minus_weight = one - layer_weight;
-        const math::SoaFloat3 one_minus_weight_f3 = {
-          one_minus_weight, one_minus_weight, one_minus_weight};
-
         for (size_t i = 0; i < _args->num_soa_joints; ++i) {
           const math::SoaTransform& src = layer->transform.begin[i];
           math::SoaTransform& dest = _args->job.output.begin[i];

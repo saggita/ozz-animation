@@ -33,8 +33,6 @@
 #include <cstddef>
 #include <cassert>
 
-#include "ozz/base/maths/math_constant.h"
-
 #include "ozz/animation/offline/raw_animation.h"
 
 namespace ozz {
@@ -75,10 +73,9 @@ bool AnimationDeltaBuilder::operator()(const RawAnimation& _input,
            &_output->tracks[i].scales);
   }
   */
-  // Output animation is always valid.
-  assert(_output->Validate());
 
-  return true;
+  // Output animation is always valid though.
+  return _output->Validate();
 }
 }  // offline
 }  // animation

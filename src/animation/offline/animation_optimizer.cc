@@ -162,10 +162,9 @@ bool AnimationOptimizer::operator()(const RawAnimation& _input,
            CompareScale, LerpScale, scale_tolerance,
            &_output->tracks[i].scales);
   }
-  // Output animation is always valid.
-  assert(_output->Validate());
 
-  return true;
+  // Output animation is always valid though.
+  return _output->Validate();
 }
 }  // offline
 }  // animation

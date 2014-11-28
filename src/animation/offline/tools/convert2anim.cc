@@ -35,7 +35,7 @@
 
 #include "ozz/animation/offline/animation_builder.h"
 #include "ozz/animation/offline/animation_optimizer.h"
-#include "ozz/animation/offline/animation_delta_builder.h"
+#include "ozz/animation/offline/additive_animation_builder.h"
 #include "ozz/animation/offline/skeleton_builder.h"
 #include "ozz/animation/offline/raw_animation.h"
 #include "ozz/animation/offline/raw_skeleton.h"
@@ -257,7 +257,7 @@ int AnimationConverter::operator()(int _argc, const char** _argv) {
   // Make delta animation if requested.
   if (OPTIONS_additive) {
     ozz::log::Log() << "Makes delta animation." << std::endl;
-    ozz::animation::offline::AnimationDeltaBuilder delta_builder;
+    ozz::animation::offline::AdditiveAnimationBuilder delta_builder;
     RawAnimation delta;
     if (!delta_builder(raw_animation, &delta)) {
       ozz::log::Err() << "Failed to make delta animation." << std::endl;

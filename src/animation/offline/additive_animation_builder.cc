@@ -28,33 +28,55 @@
 //                                                                            //
 //============================================================================//
 
-#ifndef OZZ_OZZ_ANIMATION_OFFLINE_ANIMATION_DELTA_BUILDER_H_
-#define OZZ_OZZ_ANIMATION_OFFLINE_ANIMATION_DELTA_BUILDER_H_
+#include "ozz/animation/offline/additive_animation_builder.h"
+
+#include <cstddef>
+#include <cassert>
+
+#include "ozz/animation/offline/raw_animation.h"
 
 namespace ozz {
 namespace animation {
 namespace offline {
 
-// Forward declare offline animation type.
-struct RawAnimation;
+// Setup default values (favoring quality).
+AdditiveAnimationBuilder::AdditiveAnimationBuilder() {
+}
 
-// Defines the class responsible of building a delta animation from an offline
-// raw animation. This is used to create animations compatible with additive
-// blending.
-class AnimationDeltaBuilder {
- public:
-  // Initializes the builder.
-  AnimationDeltaBuilder();
+bool AdditiveAnimationBuilder::operator()(const RawAnimation& _input,
+                                       RawAnimation* _output) const {
+  if (!_output) {
+    return false;
+  }
+  // Reset output animation to default.
+  *_output = RawAnimation();
 
-  // Builds delta animation from _input..
-  // Returns true on success and fills _output_animation with the delta
-  // version of _input animation.
-  // *_output must be a valid RawAnimation instance.
-  // Returns false on failure and resets _output to an empty animation.
-  // See RawAnimation::Validate() for more details about failure reasons.
-  bool operator()(const RawAnimation& _input, RawAnimation* _output) const;
-};
+  // Validate animation.
+  if (!_input.Validate()) {
+    return false;
+  }
+
+  // Rebuilds output animation.
+  _output->duration = _input.duration;
+  int num_tracks = _input.num_tracks();
+  _output->tracks.resize(num_tracks);
+  /*
+  for (int i = 0; i < num_tracks; ++i) {
+    Filter(_input.tracks[i].translations,
+           CompareTranslation, LerpTranslation, translation_tolerance,
+           &_output->tracks[i].translations);
+    Filter(_input.tracks[i].rotations,
+           CompareRotation, LerpRotation, rotation_tolerance,
+           &_output->tracks[i].rotations);
+    Filter(_input.tracks[i].scales,
+           CompareScale, LerpScale, scale_tolerance,
+           &_output->tracks[i].scales);
+  }
+  */
+
+  // Output animation is always valid though.
+  return _output->Validate();
+}
 }  // offline
 }  // animation
 }  // ozz
-#endif  // OZZ_OZZ_ANIMATION_OFFLINE_ANIMATION_DELTA_BUILDER_H_

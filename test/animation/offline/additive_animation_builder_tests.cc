@@ -141,33 +141,42 @@ TEST(Build, AdditiveAnimationBuilder) {
       const RawAnimation::JointTrack::Translations& translations =
         output.tracks[1].translations;
       EXPECT_EQ(translations.size(), 1u);
+      EXPECT_FLOAT_EQ(translations[0].time, 0.f);
       EXPECT_FLOAT3_EQ(translations[0].value, 0.f, 0.f, 0.f);
       const RawAnimation::JointTrack::Rotations& rotations =
         output.tracks[1].rotations;
       EXPECT_EQ(rotations.size(), 1u);
+      EXPECT_FLOAT_EQ(rotations[0].time, 0.f);
       EXPECT_QUATERNION_EQ(rotations[0].value, 0.f, 0.f, 0.f, 1.f);
       const RawAnimation::JointTrack::Scales& scales =
         output.tracks[1].scales;
       EXPECT_EQ(scales.size(), 1u);
+      EXPECT_FLOAT_EQ(scales[0].time, 0.f);
       EXPECT_FLOAT3_EQ(scales[0].value, 1.f, 1.f, 1.f);
     }
 
     // 3rd track.
     {
       const RawAnimation::JointTrack::Translations& translations =
-        output.tracks[1].translations;
+        output.tracks[2].translations;
       EXPECT_EQ(translations.size(), 2u);
+      EXPECT_FLOAT_EQ(translations[0].time, .5f);
       EXPECT_FLOAT3_EQ(translations[0].value, 0.f, 0.f, 0.f);
+      EXPECT_FLOAT_EQ(translations[1].time, .7f);
       EXPECT_FLOAT3_EQ(translations[1].value, 18.f, 27.f, 36.f);
       const RawAnimation::JointTrack::Rotations& rotations =
-        output.tracks[1].rotations;
+        output.tracks[2].rotations;
       EXPECT_EQ(rotations.size(), 2u);
+      EXPECT_FLOAT_EQ(rotations[0].time, 0.f);
       EXPECT_QUATERNION_EQ(rotations[0].value, 0.f, 0.f, 0.f, 0.f);
+      EXPECT_FLOAT_EQ(rotations[1].time, .7f);
       EXPECT_QUATERNION_EQ(rotations[1].value, -.70710677f, 0.f, 0.f, .70710677f);
       const RawAnimation::JointTrack::Scales& scales =
-        output.tracks[1].scales;
+        output.tracks[2].scales;
       EXPECT_EQ(scales.size(), 2u);
+      EXPECT_FLOAT_EQ(scales[0].time, 0.f);
       EXPECT_FLOAT3_EQ(scales[0].value, 1.f, 1.f, 1.f);
+      EXPECT_FLOAT_EQ(scales[1].time, .7f);
       EXPECT_FLOAT3_EQ(scales[1].value, 10.f, 10.f, 10.f);
     }
   }

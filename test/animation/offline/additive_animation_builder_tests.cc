@@ -167,14 +167,14 @@ TEST(Build, AdditiveAnimationBuilder) {
       const RawAnimation::JointTrack::Rotations& rotations =
         output.tracks[2].rotations;
       EXPECT_EQ(rotations.size(), 2u);
-      EXPECT_FLOAT_EQ(rotations[0].time, 0.f);
-      EXPECT_QUATERNION_EQ(rotations[0].value, 0.f, 0.f, 0.f, 0.f);
+      EXPECT_FLOAT_EQ(rotations[0].time, .5f);
+      EXPECT_QUATERNION_EQ(rotations[0].value, 0.f, 0.f, 0.f, 1.f);
       EXPECT_FLOAT_EQ(rotations[1].time, .7f);
       EXPECT_QUATERNION_EQ(rotations[1].value, -.70710677f, 0.f, 0.f, .70710677f);
       const RawAnimation::JointTrack::Scales& scales =
         output.tracks[2].scales;
       EXPECT_EQ(scales.size(), 2u);
-      EXPECT_FLOAT_EQ(scales[0].time, 0.f);
+      EXPECT_FLOAT_EQ(scales[0].time, .5f);
       EXPECT_FLOAT3_EQ(scales[0].value, 1.f, 1.f, 1.f);
       EXPECT_FLOAT_EQ(scales[1].time, .7f);
       EXPECT_FLOAT3_EQ(scales[1].value, 10.f, 10.f, 10.f);

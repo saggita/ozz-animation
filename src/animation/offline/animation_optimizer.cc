@@ -90,8 +90,8 @@ void Filter(const _RawTrack& _src,
 
 // Translation filtering comparator.
 bool CompareTranslation(const math::Float3& _a,
-                   const math::Float3& _b,
-                   float _tolerance) {
+                        const math::Float3& _b,
+                        float _tolerance) {
   return Compare(_a, _b, _tolerance);
 }
 

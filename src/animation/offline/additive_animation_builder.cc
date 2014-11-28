@@ -39,12 +39,54 @@ namespace ozz {
 namespace animation {
 namespace offline {
 
+namespace {
+template<typename _RawTrack, typename _MakeDelta>
+void MakeDelta(const _RawTrack& _src,
+               const _MakeDelta& _make_delta,
+               _RawTrack* _dest) {
+  _dest->clear();  // Reset and reserve destination.
+  _dest->reserve(_src.size());
+
+  // Early out if no key.
+  if (_src.empty()) {
+    return;
+  }
+
+  // Stores reference value.
+  typename _RawTrack::const_reference reference = _src[0];
+
+  // Copy animation keys.
+  for (size_t i = 0; i < _src.size(); ++i) {
+    const typename _RawTrack::value_type delta = {
+      _src[i].time,
+      _make_delta(reference.value, _src[i].value)
+    };
+    _dest->push_back(delta);
+  }
+}
+
+math::Float3 MakeDeltaTranslation(const math::Float3& _reference,
+                                  const math::Float3& _value) {
+  return _value - _reference;
+}
+
+math::Quaternion MakeDeltaRotation(const math::Quaternion& _reference,
+                                   const math::Quaternion& _value) {
+  return Conjugate(_reference) * _value;
+}
+
+math::Float3 MakeDeltaScale(const math::Float3& _reference,
+                            const math::Float3& _value) {
+  return _value / _reference;
+}
+}
+
 // Setup default values (favoring quality).
 AdditiveAnimationBuilder::AdditiveAnimationBuilder() {
 }
 
 bool AdditiveAnimationBuilder::operator()(const RawAnimation& _input,
-                                       RawAnimation* _output) const {
+                                          RawAnimation* _output) const {
   if (!_output) {
     return false;
   }
@@ -60,19 +102,18 @@ bool AdditiveAnimationBuilder::operator()(const RawAnimation& _input,
   _output->duration = _input.duration;
   int num_tracks = _input.num_tracks();
   _output->tracks.resize(num_tracks);
-  /*
+  
   for (int i = 0; i < num_tracks; ++i) {
-    Filter(_input.tracks[i].translations,
-           CompareTranslation, LerpTranslation, translation_tolerance,
-           &_output->tracks[i].translations);
-    Filter(_input.tracks[i].rotations,
-           CompareRotation, LerpRotation, rotation_tolerance,
-           &_output->tracks[i].rotations);
-    Filter(_input.tracks[i].scales,
-           CompareScale, LerpScale, scale_tolerance,
-           &_output->tracks[i].scales);
+    MakeDelta(_input.tracks[i].translations,
+              MakeDeltaTranslation,
+              &_output->tracks[i].translations);
+    MakeDelta(_input.tracks[i].rotations,
+              MakeDeltaRotation,
+              &_output->tracks[i].rotations);
+    MakeDelta(_input.tracks[i].scales,
+              MakeDeltaScale,
+              &_output->tracks[i].scales);
   }
-  */
 
   // Output animation is always valid though.
   return _output->Validate();

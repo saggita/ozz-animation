@@ -8,7 +8,7 @@ add_custom_command(
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/README"
          "${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
          "${CMAKE_CURRENT_BINARY_DIR}/media/walk.ozz"
-         "${CMAKE_CURRENT_BINARY_DIR}/media/crossarms.ozz"
+         "${CMAKE_CURRENT_BINARY_DIR}/media/additive.ozz"
   COMMAND ${CMAKE_COMMAND} -E make_directory media
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_LIST_DIR}/README .
   COMMAND dae2skel
@@ -19,16 +19,17 @@ add_custom_command(
     "--skeleton=${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
     "--animation=media/walk.ozz"
   COMMAND dae2anim
+    "--additive"
     "--file=${ozz_media_directory}/collada/alain/crossarms.dae"
     "--skeleton=${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
-    "--animation=${CMAKE_CURRENT_BINARY_DIR}/media/crossarms.ozz")
+    "--animation=${CMAKE_CURRENT_BINARY_DIR}/media/additive.ozz")
 
 add_executable(sample_additive
   sample_additive.cc
   "${CMAKE_CURRENT_BINARY_DIR}/README"
   "${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
   "${CMAKE_CURRENT_BINARY_DIR}/media/walk.ozz"
-  "${CMAKE_CURRENT_BINARY_DIR}/media/crossarms.ozz")
+  "${CMAKE_CURRENT_BINARY_DIR}/media/additive.ozz")
 target_link_libraries(sample_additive
   sample_framework
   ozz_animation
@@ -67,10 +68,10 @@ else()
 endif(EMSCRIPTEN)
 
 add_test(NAME sample_additive COMMAND sample_additive "--max_idle_loops=${SAMPLE_TESTING_LOOPS}" ${SAMPLE_RENDER_ARGUMENT})
-add_test(NAME sample_additive_path COMMAND sample_additive "--skeleton=media/skeleton.ozz" "--lower_body_animation=media/walk.ozz" "--upper_body_animation=media/crossarms.ozz" "--max_idle_loops=${SAMPLE_TESTING_LOOPS}" ${SAMPLE_RENDER_ARGUMENT})
+add_test(NAME sample_additive_path COMMAND sample_additive "--skeleton=media/skeleton.ozz" "--animation=media/walk.ozz" "--additive_animation=media/additive.ozz" "--max_idle_loops=${SAMPLE_TESTING_LOOPS}" ${SAMPLE_RENDER_ARGUMENT})
 add_test(NAME sample_additive_invalid_skeleton_path COMMAND sample_additive "--skeleton=media/bad_skeleton.ozz" ${SAMPLE_RENDER_ARGUMENT})
 set_tests_properties(sample_additive_invalid_skeleton_path PROPERTIES WILL_FAIL true)
-add_test(NAME sample_additive_invalid_animation_path1 COMMAND sample_additive "--lower_body_animation=media/bad_animation.ozz" ${SAMPLE_RENDER_ARGUMENT})
+add_test(NAME sample_additive_invalid_animation_path1 COMMAND sample_additive "--animation=media/bad_animation.ozz" ${SAMPLE_RENDER_ARGUMENT})
 set_tests_properties(sample_additive_invalid_animation_path1 PROPERTIES WILL_FAIL true)
-add_test(NAME sample_additive_invalid_animation_path2 COMMAND sample_additive "--upper_body_animation=media/bad_animation.ozz" ${SAMPLE_RENDER_ARGUMENT})
+add_test(NAME sample_additive_invalid_animation_path2 COMMAND sample_additive "--additive_animation=media/bad_animation.ozz" ${SAMPLE_RENDER_ARGUMENT})
 set_tests_properties(sample_additive_invalid_animation_path2 PROPERTIES WILL_FAIL true)

@@ -256,15 +256,15 @@ int AnimationConverter::operator()(int _argc, const char** _argv) {
 
   // Make delta animation if requested.
   if (OPTIONS_additive) {
-    ozz::log::Log() << "Makes delta animation." << std::endl;
-    ozz::animation::offline::AdditiveAnimationBuilder delta_builder;
-    RawAnimation delta;
-    if (!delta_builder(raw_animation, &delta)) {
-      ozz::log::Err() << "Failed to make delta animation." << std::endl;
+    ozz::log::Log() << "Makes additive animation." << std::endl;
+    ozz::animation::offline::AdditiveAnimationBuilder additive_builder;
+    RawAnimation raw_additive;
+    if (!additive_builder(raw_animation, &raw_additive)) {
+      ozz::log::Err() << "Failed to make additive animation." << std::endl;
       return EXIT_FAILURE;
     }
     // Copy animation.
-    raw_animation = delta;
+    raw_animation = raw_additive;
   }
 
   // Optimizes animation.

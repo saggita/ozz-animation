@@ -63,16 +63,16 @@ OZZ_OPTIONS_DECLARE_STRING(
 
 // Lower body animation archive can be specified as an option.
 OZZ_OPTIONS_DECLARE_STRING(
-  lower_body_animation,
+  animation,
   "Path to the lower body animation(ozz archive format).",
   "media/walk.ozz",
   false)
 
 // Upper body animation archive can be specified as an option.
 OZZ_OPTIONS_DECLARE_STRING(
-  upper_body_animation,
-  "Path to the upper body animation (ozz archive format).",
-  "media/crossarms.ozz",
+  additive_animation,
+  "Path to the upper body additive animation (ozz archive format).",
+  "media/additive.ozz",
   false)
 
 class AdditiveBlendSampleApplication : public ozz::sample::Application {
@@ -170,7 +170,7 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
 
     // Reading animations.
     const char* filenames[] = {
-      OPTIONS_lower_body_animation, OPTIONS_upper_body_animation};
+      OPTIONS_animation, OPTIONS_additive_animation};
     for (int i = 0; i < kNumLayers; ++i) {
       Sampler& sampler = samplers_[i];
 
@@ -315,7 +315,7 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
           upper_body_sampler.joint_weight_setting);
         _im_gui->DoSlider(label, 0.f, 1.f,
           &upper_body_sampler.joint_weight_setting, 1.f, !automatic);
-
+        _im_gui->DoLabel("Global settings:");
         std::sprintf(label, "Threshold: %.2f", threshold_);
         _im_gui->DoSlider(label, .01f, 1.f, &threshold_);
 

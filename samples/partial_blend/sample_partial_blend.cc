@@ -315,7 +315,7 @@ class PartialBlendSampleApplication : public ozz::sample::Application {
           upper_body_sampler.joint_weight_setting);
         _im_gui->DoSlider(label, 0.f, 1.f,
           &upper_body_sampler.joint_weight_setting, 1.f, !automatic);
-
+        _im_gui->DoLabel("Global settings:");
         std::sprintf(label, "Threshold: %.2f", threshold_);
         _im_gui->DoSlider(label, .01f, 1.f, &threshold_);
 

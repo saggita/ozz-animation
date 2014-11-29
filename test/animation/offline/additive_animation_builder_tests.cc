@@ -111,7 +111,7 @@ TEST(Build, AdditiveAnimationBuilder) {
       .5f, ozz::math::Quaternion(.70710677f, 0.f, 0.f, .70710677f)};
     input.tracks[2].rotations.push_back(key0);
     const RawAnimation::RotationKey key1 = {
-      .7f, ozz::math::Quaternion(0.f, 0.f, 0.f, 1.f)};
+      .7f, ozz::math::Quaternion(-.70710677f, 0.f, 0.f, .70710677f)};
     input.tracks[2].rotations.push_back(key1);
   }
   {
@@ -170,7 +170,7 @@ TEST(Build, AdditiveAnimationBuilder) {
       EXPECT_FLOAT_EQ(rotations[0].time, .5f);
       EXPECT_QUATERNION_EQ(rotations[0].value, 0.f, 0.f, 0.f, 1.f);
       EXPECT_FLOAT_EQ(rotations[1].time, .7f);
-      EXPECT_QUATERNION_EQ(rotations[1].value, -.70710677f, 0.f, 0.f, .70710677f);
+      EXPECT_QUATERNION_EQ(rotations[1].value, -1.f, 0.f, 0.f, 0.f);
       const RawAnimation::JointTrack::Scales& scales =
         output.tracks[2].scales;
       EXPECT_EQ(scales.size(), 2u);

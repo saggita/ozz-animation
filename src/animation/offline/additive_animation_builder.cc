@@ -44,7 +44,6 @@ template<typename _RawTrack, typename _MakeDelta>
 void MakeDelta(const _RawTrack& _src,
                const _MakeDelta& _make_delta,
                _RawTrack* _dest) {
-  _dest->clear();  // Reset and reserve destination.
   _dest->reserve(_src.size());
 
   // Early out if no key.
@@ -79,7 +78,7 @@ math::Float3 MakeDeltaScale(const math::Float3& _reference,
                             const math::Float3& _value) {
   return _value / _reference;
 }
-}
+}  // namespace
 
 // Setup default values (favoring quality).
 AdditiveAnimationBuilder::AdditiveAnimationBuilder() {
@@ -100,10 +99,9 @@ bool AdditiveAnimationBuilder::operator()(const RawAnimation& _input,
 
   // Rebuilds output animation.
   _output->duration = _input.duration;
-  int num_tracks = _input.num_tracks();
-  _output->tracks.resize(num_tracks);
+  _output->tracks.resize(_input.tracks.size());
   
-  for (int i = 0; i < num_tracks; ++i) {
+  for (size_t i = 0; i < _input.tracks.size(); ++i) {
     MakeDelta(_input.tracks[i].translations,
               MakeDeltaTranslation,
               &_output->tracks[i].translations);

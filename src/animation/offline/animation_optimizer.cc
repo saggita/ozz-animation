@@ -56,7 +56,6 @@ void Filter(const _RawTrack& _src,
             const _Lerp& _lerp,
             float _tolerance,
             _RawTrack* _dest) {
-  _dest->clear();  // Reset and reserve destination.
   _dest->reserve(_src.size());
 
   // Only copies the key that cannot be interpolated from the others.
@@ -149,9 +148,9 @@ bool AnimationOptimizer::operator()(const RawAnimation& _input,
 
   // Rebuilds output animation.
   _output->duration = _input.duration;
-  int num_tracks = _input.num_tracks();
-  _output->tracks.resize(num_tracks);
-  for (int i = 0; i < num_tracks; ++i) {
+  _output->tracks.resize(_input.tracks.size());
+  
+  for (size_t i = 0; i < _input.tracks.size(); ++i) {
     Filter(_input.tracks[i].translations,
            CompareTranslation, LerpTranslation, translation_tolerance,
            &_output->tracks[i].translations);

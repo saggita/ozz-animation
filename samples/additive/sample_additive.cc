@@ -112,20 +112,29 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     // transform buffer blended_locals_
 
     // Prepares blending layers.
-    ozz::animation::BlendingJob::Layer layers[kNumLayers];
-    for (int i = 0; i < kNumLayers; ++i) {
+    ozz::animation::BlendingJob::Layer layers[1];
+    for (int i = 0; i < 1; ++i) {
       layers[i].transform = samplers_[i].locals;
       layers[i].weight = samplers_[i].weight_setting;
 
       // Set per-joint weights for the partially blended layer.
-      layers[i].joint_weights = samplers_[i].joint_weights;
+      //layers[i].joint_weights = samplers_[i].joint_weights;
+    }
+
+    ozz::animation::BlendingJob::Layer additive_layers[1];
+    for (int i = 1; i < 2; ++i) {
+      additive_layers[0].transform = samplers_[i].locals;
+      additive_layers[0].weight = samplers_[i].weight_setting;
+
+      // Set per-joint weights for the partially blended layer.
+      additive_layers[0].joint_weights = samplers_[i].joint_weights;
     }
 
     // Setups blending job.
     ozz::animation::BlendingJob blend_job;
-    blend_job.threshold = threshold_; 
-    blend_job.layers.begin = layers;
-    blend_job.layers.end = layers + kNumLayers;
+    blend_job.threshold = threshold_;
+    blend_job.layers = layers;
+    blend_job.additive_layers = additive_layers;
     blend_job.bind_pose = skeleton_.bind_pose();
     blend_job.output = blended_locals_;
 

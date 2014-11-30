@@ -71,7 +71,7 @@ math::Float3 MakeDeltaTranslation(const math::Float3& _reference,
 
 math::Quaternion MakeDeltaRotation(const math::Quaternion& _reference,
                                    const math::Quaternion& _value) {
-  return Conjugate(_reference) * _value;
+  return _value * Conjugate(_reference);
 }
 
 math::Float3 MakeDeltaScale(const math::Float3& _reference,

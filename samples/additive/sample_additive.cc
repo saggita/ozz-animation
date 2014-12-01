@@ -68,7 +68,7 @@ OZZ_OPTIONS_DECLARE_STRING(
   "media/walk.ozz",
   false)
 
-// Upper body animation archive can be specified as an option.
+// Additive animation archive can be specified as an option.
 OZZ_OPTIONS_DECLARE_STRING(
   additive_animation,
   "Path to the upper body additive animation (ozz archive format).",
@@ -79,6 +79,8 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
  public:
   AdditiveBlendSampleApplication()
     : upper_body_root_(0),
+      upper_body_mask_enable_(true),
+      upper_body_joint_weight_setting_(1.f),
       threshold_(ozz::animation::BlendingJob().threshold) {
   }
 
@@ -116,9 +118,6 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     for (int i = 0; i < 1; ++i) {
       layers[i].transform = samplers_[i].locals;
       layers[i].weight = samplers_[i].weight_setting;
-
-      // Set per-joint weights for the partially blended layer.
-      //layers[i].joint_weights = samplers_[i].joint_weights;
     }
 
     ozz::animation::BlendingJob::Layer additive_layers[1];
@@ -126,8 +125,8 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
       additive_layers[0].transform = samplers_[i].locals;
       additive_layers[0].weight = samplers_[i].weight_setting;
 
-      // Set per-joint weights for the partially blended layer.
-      additive_layers[0].joint_weights = samplers_[i].joint_weights;
+      // Set per-joint weights for the additive blended layer.
+      additive_layers[0].joint_weights = upper_body_joint_weights_;
     }
 
     // Setups blending job.
@@ -191,23 +190,15 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
       sampler.locals =
         allocator->AllocateRange<ozz::math::SoaTransform>(num_soa_joints);
 
-      // Allocates per-joint weights used for the partial animation. Note that
-      // this is a Soa structure.
-      sampler.joint_weights =
-        allocator->AllocateRange<ozz::math::SimdFloat4>(num_soa_joints);
-
       // Allocates a cache that matches animation requirements.
       sampler.cache = allocator->New<ozz::animation::SamplingCache>(num_joints);
     }
 
     // Default weight settings.
-    Sampler& lower_body_sampler = samplers_[kLowerBody];
-    lower_body_sampler.weight_setting = 1.f;
-    lower_body_sampler.joint_weight_setting= 0.f;
+    samplers_[kMainAnimation].weight_setting = 1.f;
 
-    Sampler& upper_body_sampler = samplers_[kUpperBody];
-    upper_body_sampler.weight_setting = 1.f;
-    upper_body_sampler.joint_weight_setting = 1.f;
+    upper_body_joint_weight_setting_ = 1.f;
+    samplers_[kAdditiveAnimation].weight_setting = 1.f;
 
     // Allocates local space runtime buffers of blended data.
     blended_locals_ =
@@ -215,6 +206,11 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
 
     // Allocates model space runtime buffers of blended data.
     models_ = allocator->AllocateRange<ozz::math::Float4x4>(num_joints);
+
+    // Allocates per-joint weights used for the partial additive animation.
+    // Note that this is a Soa structure.
+    upper_body_joint_weights_ =
+      allocator->AllocateRange<ozz::math::SimdFloat4>(num_soa_joints);
 
     // Finds the "Spine1" joint in the joint hierarchy.
     for (int i = 0; i < num_joints; ++i) {
@@ -232,16 +228,10 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     // Setup partial animation mask. This mask is defined by a weight_setting
     // assigned to each joint of the hierarchy. Joint to disable are set to a
     // weight_setting of 0.f, and enabled joints are set to 1.f.
-    // Per-joint weights of lower and upper body layers have opposed values
-    // (weight_setting and 1 - weight_setting) in order for a layer to select
-    // joints that are rejected by the other layer.
-    Sampler& lower_body_sampler = samplers_[kLowerBody];
-    Sampler& upper_body_sampler = samplers_[kUpperBody];
 
     // Disables all joints: set all weights to 0.
     for (int i = 0; i < skeleton_.num_soa_joints(); ++i) {
-      lower_body_sampler.joint_weights[i] = ozz::math::simd_float4::one();
-      upper_body_sampler.joint_weights[i] = ozz::math::simd_float4::zero();
+     upper_body_joint_weights_[i] = ozz::math::simd_float4::zero();
     }
 
     // Extracts the list of children of the shoulder.
@@ -252,17 +242,11 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     // that weights are stored in SoA format.
     for (int i = 0; i < it.num_joints; ++i) {
       const int joint_id = it.joints[i];
-      {  // Updates lower body animation sampler joint weights.
-        ozz::math::SimdFloat4& weight_setting =
-          lower_body_sampler.joint_weights[joint_id/4];
-        weight_setting = ozz::math::SetI(
-          weight_setting, joint_id %4, lower_body_sampler.joint_weight_setting);
-      }
       {  // Updates upper body animation sampler joint weights.
         ozz::math::SimdFloat4& weight_setting =
-          upper_body_sampler.joint_weights[joint_id/4];
+          upper_body_joint_weights_[joint_id/4];
         weight_setting = ozz::math::SetI(
-          weight_setting, joint_id %4, upper_body_sampler.joint_weight_setting);
+          weight_setting, joint_id %4, upper_body_joint_weight_setting_);
       }
     }
   }
@@ -272,9 +256,9 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     for (int i = 0; i < kNumLayers; ++i) {
       Sampler& sampler = samplers_[i];
       allocator->Deallocate(sampler.locals);
-      allocator->Deallocate(sampler.joint_weights);
       allocator->Delete(sampler.cache);
     }
+    allocator->Deallocate(upper_body_joint_weights_);
     allocator->Deallocate(blended_locals_);
     allocator->Deallocate(models_.begin);
   }
@@ -287,46 +271,27 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
       if (open) {
         char label[64];
 
-        static bool automatic = true;
-        _im_gui->DoCheckBox("Use automatic blending settings", &automatic);
-
-        static float coeff = 1.f;  // All power to the partial animation.
-        std::sprintf(label, "Upper body weight: %.2f", coeff);
-        _im_gui->DoSlider(label, 0.f, 1.f, &coeff, 1.f, automatic);
-
-        Sampler& lower_body_sampler = samplers_[kLowerBody];
-        Sampler& upper_body_sampler = samplers_[kUpperBody];
-
-        if (automatic) {
-          // Blending values are forced when "automatic" mode is selected.
-          lower_body_sampler.weight_setting = 1.f;
-          lower_body_sampler.joint_weight_setting = 1.f - coeff;
-          upper_body_sampler.weight_setting = 1.f;
-          upper_body_sampler.joint_weight_setting = coeff;
-        }
-
-        _im_gui->DoLabel("Manual settings:");
-        _im_gui->DoLabel("Lower body layer:");
+        _im_gui->DoLabel("Main layer:");
         std::sprintf(label, "Layer weight: %.2f",
-          lower_body_sampler.weight_setting);
+                     samplers_[kMainAnimation].weight_setting);
         _im_gui->DoSlider(label, 0.f, 1.f,
-          &lower_body_sampler.weight_setting, 1.f, !automatic);
-        std::sprintf(label, "Joints weight: %.2f",
-          lower_body_sampler.joint_weight_setting);
-        _im_gui->DoSlider(label, 0.f, 1.f,
-          &lower_body_sampler.joint_weight_setting, 1.f, !automatic);
-        _im_gui->DoLabel("Upper body layer:");
+                          &samplers_[kMainAnimation].weight_setting, 1.f);
+        _im_gui->DoLabel("Additive layer:");
         std::sprintf(label, "Layer weight: %.2f",
-          upper_body_sampler.weight_setting);
-        _im_gui->DoSlider(label, 0.f, 1.f,
-          &upper_body_sampler.weight_setting, 1.f, !automatic);
-        std::sprintf(label, "Joints weight: %.2f",
-          upper_body_sampler.joint_weight_setting);
-        _im_gui->DoSlider(label, 0.f, 1.f,
-          &upper_body_sampler.joint_weight_setting, 1.f, !automatic);
+                     samplers_[kAdditiveAnimation].weight_setting);
+        _im_gui->DoSlider(label, -1.f, 1.f,
+                          &samplers_[kAdditiveAnimation].weight_setting, 1.f);
         _im_gui->DoLabel("Global settings:");
         std::sprintf(label, "Threshold: %.2f", threshold_);
         _im_gui->DoSlider(label, .01f, 1.f, &threshold_);
+
+        _im_gui->DoCheckBox("Upper body masking",
+                            &upper_body_mask_enable_);
+        std::sprintf(label, "Joints weight: %.2f",
+                     upper_body_joint_weight_setting_);
+        _im_gui->DoSlider(label, 0.f, 1.f,
+                          &upper_body_joint_weight_setting_, 1.f,
+                          upper_body_mask_enable_);
 
         SetupPerJointWeights();
       }
@@ -337,14 +302,14 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
       ozz::sample::ImGui::OpenClose oc(_im_gui, "Root", &open);
       if (open && skeleton_.num_joints() != 0) {
         _im_gui->DoLabel("Root of the upper body hierarchy:",
-          ozz::sample::ImGui::kLeft, false);
+                         ozz::sample::ImGui::kLeft, false);
         char label[64];
         std::sprintf(label, "%s (%d)",
-          skeleton_.joint_names()[upper_body_root_],
-          upper_body_root_);
+                     skeleton_.joint_names()[upper_body_root_],
+                     upper_body_root_);
         if (_im_gui->DoSlider(label,
-          0, skeleton_.num_joints() - 1,
-          &upper_body_root_)) {
+                              0, skeleton_.num_joints() - 1,
+                              &upper_body_root_)) {
             SetupPerJointWeights();
         }
       }
@@ -356,7 +321,7 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
       if (oc_open) {
         static bool open[kNumLayers] = {true, true};
         const char* oc_names[kNumLayers] = {
-          "Lower body animation", "Upper body animation"};
+          "Main animation", "Additive animation"};
         for (int i = 0; i < kNumLayers; ++i) {
           Sampler& sampler = samplers_[i];
           ozz::sample::ImGui::OpenClose oc(_im_gui, oc_names[i], NULL);
@@ -381,8 +346,8 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
 
   // The number of layers to blend.
   enum {
-    kLowerBody = 0,
-    kUpperBody = 1,
+    kMainAnimation = 0,
+    kAdditiveAnimation = 1,
     kNumLayers = 2,
   };
 
@@ -392,7 +357,6 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     // Constructor, default initialization.
     Sampler()
      : weight_setting(1.f),
-       joint_weight_setting(1.f),
        cache(NULL) {
     }
 
@@ -403,10 +367,6 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     // Blending weight_setting for the layer.
     float weight_setting;
 
-    // Blending weight_setting setting of the joints of this layer that are affected
-    // by the masking.
-    float joint_weight_setting;
-
     // Runtime animation.
     ozz::animation::Animation animation;
 
@@ -416,14 +376,22 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     // Buffer of local transforms as sampled from animation_.
     ozz::Range<ozz::math::SoaTransform> locals;
 
-    // Per-joint weights used to define the partial animation mask. Allows to
-    // select which joints are considered during blending, and their individual
-    // weight_setting.
-    ozz::Range<ozz::math::SimdFloat4> joint_weights;
   } samplers_[kNumLayers];  // kNumLayers animations to blend.
 
   // Index of the joint at the base of the upper body hierarchy.
   int upper_body_root_;
+
+  // Enables upper boddy per-joint weights.
+  bool upper_body_mask_enable_;
+
+  // Blending weight_setting setting of the joints of this layer that are affected
+  // by the masking.
+  float upper_body_joint_weight_setting_;
+
+  // Per-joint weights used to define the partial animation mask. Allows to
+  // select which joints are considered during blending, and their individual
+  // weight_setting.
+  ozz::Range<ozz::math::SimdFloat4> upper_body_joint_weights_;
 
   // Blending job bind pose threshold.
   float threshold_;

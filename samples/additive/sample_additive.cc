@@ -72,7 +72,7 @@ OZZ_OPTIONS_DECLARE_STRING(
 OZZ_OPTIONS_DECLARE_STRING(
   additive_animation,
   "Path to the upper body additive animation (ozz archive format).",
-  "media/additive.ozz",
+  "media/hit.ozz",
   false)
 
 class AdditiveBlendSampleApplication : public ozz::sample::Application {
@@ -126,7 +126,9 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
       additive_layers[0].weight = samplers_[i].weight_setting;
 
       // Set per-joint weights for the additive blended layer.
-      additive_layers[0].joint_weights = upper_body_joint_weights_;
+      if (upper_body_mask_enable_) {
+        additive_layers[0].joint_weights = upper_body_joint_weights_;
+      }
     }
 
     // Setups blending job.

@@ -72,7 +72,7 @@ OZZ_OPTIONS_DECLARE_STRING(
 OZZ_OPTIONS_DECLARE_STRING(
   additive_animation,
   "Path to the upper body additive animation (ozz archive format).",
-  "media/hit.ozz",
+  "media/additive.ozz",
   false)
 
 class AdditiveBlendSampleApplication : public ozz::sample::Application {

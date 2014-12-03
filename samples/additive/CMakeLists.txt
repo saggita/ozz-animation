@@ -8,7 +8,7 @@ add_custom_command(
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/README"
          "${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
          "${CMAKE_CURRENT_BINARY_DIR}/media/walk.ozz"
-         "${CMAKE_CURRENT_BINARY_DIR}/media/hit.ozz"
+         "${CMAKE_CURRENT_BINARY_DIR}/media/additive.ozz"
   COMMAND ${CMAKE_COMMAND} -E make_directory media
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_LIST_DIR}/README .
   COMMAND dae2skel
@@ -22,14 +22,14 @@ add_custom_command(
     "--additive"
     "--file=${ozz_media_directory}/collada/alain/hit_r.dae"
     "--skeleton=${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
-    "--animation=${CMAKE_CURRENT_BINARY_DIR}/media/hit.ozz")
+    "--animation=${CMAKE_CURRENT_BINARY_DIR}/media/additive.ozz")
 
 add_executable(sample_additive
   sample_additive.cc
   "${CMAKE_CURRENT_BINARY_DIR}/README"
   "${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
   "${CMAKE_CURRENT_BINARY_DIR}/media/walk.ozz"
-  "${CMAKE_CURRENT_BINARY_DIR}/media/hit.ozz")
+  "${CMAKE_CURRENT_BINARY_DIR}/media/additive.ozz")
 target_link_libraries(sample_additive
   sample_framework
   ozz_animation

@@ -266,13 +266,13 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
   }
 
   virtual bool OnGui(ozz::sample::ImGui* _im_gui) {
+    char label[64];
+
     // Exposes blending parameters.
     {
       static bool open = true;
       ozz::sample::ImGui::OpenClose oc(_im_gui, "Blending parameters", &open);
       if (open) {
-        char label[64];
-
         _im_gui->DoLabel("Main layer:");
         std::sprintf(label, "Layer weight: %.2f",
                      samplers_[kMainAnimation].weight_setting);
@@ -286,34 +286,33 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
         _im_gui->DoLabel("Global settings:");
         std::sprintf(label, "Threshold: %.2f", threshold_);
         _im_gui->DoSlider(label, .01f, 1.f, &threshold_);
+      }
+    }
+    // Exposes selection of the root of the partial blending hierarchy.
+    {
+      static bool open = true;
+      ozz::sample::ImGui::OpenClose oc(_im_gui, "Upper body masking", &open);
 
-        _im_gui->DoCheckBox("Upper body masking",
-                            &upper_body_mask_enable_);
+      if (open) {
+        _im_gui->DoCheckBox("Enable mask", &upper_body_mask_enable_);
+
         std::sprintf(label, "Joints weight: %.2f",
                      upper_body_joint_weight_setting_);
         _im_gui->DoSlider(label, 0.f, 1.f,
                           &upper_body_joint_weight_setting_, 1.f,
                           upper_body_mask_enable_);
 
-        SetupPerJointWeights();
-      }
-    }
-    // Exposes selection of the root of the partial blending hierarchy.
-    {
-      static bool open = true;
-      ozz::sample::ImGui::OpenClose oc(_im_gui, "Root", &open);
-      if (open && skeleton_.num_joints() != 0) {
-        _im_gui->DoLabel("Root of the upper body hierarchy:",
-                         ozz::sample::ImGui::kLeft, false);
-        char label[64];
-        std::sprintf(label, "%s (%d)",
-                     skeleton_.joint_names()[upper_body_root_],
-                     upper_body_root_);
-        if (_im_gui->DoSlider(label,
-                              0, skeleton_.num_joints() - 1,
-                              &upper_body_root_)) {
-            SetupPerJointWeights();
+        if (skeleton_.num_joints() != 0) {
+          _im_gui->DoLabel("Root of the upper body hierarchy:",
+                           ozz::sample::ImGui::kLeft, false);
+          std::sprintf(label, "%s (%d)",
+                       skeleton_.joint_names()[upper_body_root_],
+                       upper_body_root_);
+          _im_gui->DoSlider(label,
+                            0, skeleton_.num_joints() - 1,
+                            &upper_body_root_, 1.f, upper_body_mask_enable_);
         }
+        SetupPerJointWeights();
       }
     }
     // Exposes animations runtime playback controls.

@@ -92,7 +92,7 @@ struct SkinnedMesh {
   };
   ozz::Vector<Part>::Std parts;
 
-  // Triangles indices. Indexed vertex are shared across all parts.
+  // Triangles indices. Indices are shared across all parts.
   ozz::Vector<uint16_t>::Std triangle_indices;
 };
 }  // sample

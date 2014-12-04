@@ -103,11 +103,11 @@ class Renderer {
     typedef Buffer<float> Positions;
     Positions positions() const;
 
-    // Normals are a buffer of 3 float per vertex.
+    // Normals are a buffer of 3 floats per vertex.
     typedef Buffer<float> Normals;
     Normals normals() const;
 
-    // Normals are a buffer of 4 unsigned byte per vertex.
+    // Normals are a buffer of 4 unsigned bytes per vertex.
     struct Color {uint8_t red, green, blue, alpha;};
     typedef Buffer<Color> Colors;
     Colors colors() const;

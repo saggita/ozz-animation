@@ -28,8 +28,8 @@
 //                                                                            //
 //============================================================================//
 
-#ifndef OZZ_SAMPLES_SKIN_SKIN_MESH_H_
-#define OZZ_SAMPLES_SKIN_SKIN_MESH_H_
+#ifndef OZZ_SAMPLES_FRAMEWORK_SKIN_MESH_H_
+#define OZZ_SAMPLES_FRAMEWORK_SKIN_MESH_H_
 
 #include "ozz/base/platform.h"
 #include "ozz/base/containers/vector.h"
@@ -113,4 +113,4 @@ void Load(IArchive& _archive,
           uint32_t _version);
 }  // io
 }  // ozz
-#endif  // OZZ_SAMPLES_SKIN_SKIN_MESH_H_
+#endif  // OZZ_SAMPLES_FRAMEWORK_SKIN_MESH_H_

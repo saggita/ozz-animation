@@ -55,7 +55,7 @@
 #include "framework/imgui.h"
 #include "framework/utils.h"
 
-#include "skin_mesh.h"
+#include "framework/skin_mesh.h"
 
 // Skeleton archive can be specified as an option.
 OZZ_OPTIONS_DECLARE_STRING(

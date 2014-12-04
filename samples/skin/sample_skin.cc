@@ -55,7 +55,11 @@
 #include "framework/imgui.h"
 #include "framework/utils.h"
 
+<<<<<<< HEAD
 #include "framework/mesh.h"
+=======
+#include "framework/skin_mesh.h"
+>>>>>>> Move skin mesh and tools to sample framework.
 
 // Skeleton archive can be specified as an option.
 OZZ_OPTIONS_DECLARE_STRING(

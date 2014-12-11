@@ -247,7 +247,10 @@ void Camera::Update(const math::Box& _box, float _delta_time, bool _first_frame)
   // Auto-framing is disabled based on user actions.
   auto_framing_ &= !zooming && !panning;
 
-  // Zooming with the mouse wheel doesn't affect autoframing in web browser as
+  // Unused rotating variable.
+  (void)rotating;
+  
+  // Zooming with the mouse wheel doesn't affect auto-framing in web browser as
   // it's so commonly used to scroll web pages.
 #ifdef EMSCRIPTEN
   (void)zooming_wheel;

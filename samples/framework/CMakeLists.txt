@@ -11,8 +11,8 @@ add_library(sample_framework
   renderer.h
   utils.h
   utils.cc
-  skin_mesh.h
-  skin_mesh.cc
+  mesh.h
+  mesh.cc
   internal/camera.h
   internal/camera.cc
   internal/immediate.h
@@ -44,8 +44,8 @@ if(ozz_build_fbx)
 
   add_executable(sample_skin_fbx2skin
     fbx2skin.cc
-    skin_mesh.h
-    skin_mesh.cc)
+    mesh.h
+    mesh.cc)
   target_link_libraries(sample_skin_fbx2skin
     ozz_animation_fbx
     ozz_animation_offline

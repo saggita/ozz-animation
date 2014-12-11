@@ -35,7 +35,7 @@
 
 #include "fbxsdk/utils/fbxgeometryconverter.h"
 
-#include "skin_mesh.h"
+#include "mesh.h"
 
 #include "ozz/base/io/archive.h"
 #include "ozz/base/io/stream.h"
@@ -55,7 +55,7 @@ OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies the skeleton that the skin is bound to.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skin, "Specifies ozz skin ouput file.", "", true)
 
-bool BuildVertices(FbxMesh* _mesh, ozz::sample::SkinnedMesh::Part* _skinned_mesh_part) {
+bool BuildVertices(FbxMesh* _mesh, ozz::sample::Mesh::Part* _skinned_mesh_part) {
 
   // Get the matrices required to transform mesh in the right unit/axis system.
   const FbxAMatrix fbx_point_transform = _mesh->GetNode()->EvaluateGlobalTransform();
@@ -150,7 +150,7 @@ bool SortInfluenceWeights(const SkinMapping& _left, const SkinMapping& _right) {
 
 bool BuildSkin(FbxMesh* _mesh,
                const ozz::animation::Skeleton& _skeleton,
-               ozz::sample::SkinnedMesh::Part* _skinned_mesh_part) {
+               ozz::sample::Mesh::Part* _skinned_mesh_part) {
   assert(_skinned_mesh_part->vertex_count() != 0);
 
   const int skin_count = _mesh->GetDeformerCount(FbxDeformer::eSkin);
@@ -272,7 +272,7 @@ bool BuildSkin(FbxMesh* _mesh,
 }
 
 bool BuildTriangleIndices(FbxMesh* _mesh,
-                          ozz::sample::SkinnedMesh* _skinned_mesh) {
+                          ozz::sample::Mesh* _skinned_mesh) {
   //  Builds triangle indices.
   const int index_count = _mesh->GetPolygonVertexCount();
   _skinned_mesh->triangle_indices.resize(index_count);
@@ -284,12 +284,12 @@ bool BuildTriangleIndices(FbxMesh* _mesh,
   return true;
 }
 
-bool SplitParts(const ozz::sample::SkinnedMesh& _skinned_mesh,
-                ozz::sample::SkinnedMesh* _partitionned_mesh) {
+bool SplitParts(const ozz::sample::Mesh& _skinned_mesh,
+                ozz::sample::Mesh* _partitionned_mesh) {
   assert(_skinned_mesh.parts.size() == 1);
   assert(_partitionned_mesh->parts.size() == 0);
 
-  const ozz::sample::SkinnedMesh::Part& in_part = _skinned_mesh.parts.front();
+  const ozz::sample::Mesh::Part& in_part = _skinned_mesh.parts.front();
   const size_t vertex_count = in_part.vertex_count();
 
   // Creates one mesh part per influence.
@@ -344,7 +344,7 @@ bool SplitParts(const ozz::sample::SkinnedMesh& _skinned_mesh,
 
     // Adds a new part.
     _partitionned_mesh->parts.resize(_partitionned_mesh->parts.size() + 1);
-    ozz::sample::SkinnedMesh::Part& out_part = _partitionned_mesh->parts.back();
+    ozz::sample::Mesh::Part& out_part = _partitionned_mesh->parts.back();
 
     // Resize output part.
     const int influences = i + 1;
@@ -414,9 +414,9 @@ bool SplitParts(const ozz::sample::SkinnedMesh& _skinned_mesh,
   return true;
 }
 
-bool StripWeights(ozz::sample::SkinnedMesh* _mesh) {
+bool StripWeights(ozz::sample::Mesh* _mesh) {
   for (size_t i = 0; i < _mesh->parts.size(); ++i) {
-    ozz::sample::SkinnedMesh::Part& part = _mesh->parts[i];
+    ozz::sample::Mesh::Part& part = _mesh->parts[i];
     const int influence_count = part.influences_count();
     const int vertex_count = part.vertex_count();
     if (influence_count == 1) {
@@ -497,9 +497,9 @@ int main(int _argc, const char** _argv) {
 
   FbxMesh* mesh = scene_loader.scene()->GetSrcObject<FbxMesh>(0);
 
-  ozz::sample::SkinnedMesh skinned_mesh;
+  ozz::sample::Mesh skinned_mesh;
   skinned_mesh.parts.resize(1);
-  ozz::sample::SkinnedMesh::Part& skinned_mesh_part = skinned_mesh.parts[0];
+  ozz::sample::Mesh::Part& skinned_mesh_part = skinned_mesh.parts[0];
   if (!BuildVertices(mesh, &skinned_mesh_part)) {
     return EXIT_FAILURE;
   }
@@ -512,7 +512,7 @@ int main(int _argc, const char** _argv) {
     return EXIT_FAILURE;
   }
 
-  ozz::sample::SkinnedMesh partitioned_meshes;
+  ozz::sample::Mesh partitioned_meshes;
   if (!SplitParts(skinned_mesh, &partitioned_meshes)) {
     return EXIT_FAILURE;
   }

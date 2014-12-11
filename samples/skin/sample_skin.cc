@@ -55,7 +55,7 @@
 #include "framework/imgui.h"
 #include "framework/utils.h"
 
-#include "framework/skin_mesh.h"
+#include "framework/mesh.h"
 
 // Skeleton archive can be specified as an option.
 OZZ_OPTIONS_DECLARE_STRING(
@@ -117,9 +117,6 @@ class SkinSampleApplication : public ozz::sample::Application {
   // Build skinning matrices, transform mesh vertices using the SkinningJob and
   // renders.
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
-
-        _renderer->DrawMesh(ozz::math::Float4x4::identity(), mesh_);
-        
 /*
     // Builds skinning matrices, based on the output of the animation stage.
     for (int i = 0; i < skeleton_.num_joints(); ++i) {
@@ -137,7 +134,7 @@ class SkinSampleApplication : public ozz::sample::Application {
     // across parts.
     int processed_vertex_count = 0;
     for (size_t i = 0; i < mesh_.parts.size(); ++i) {
-      const ozz::sample::SkinnedMesh::Part& part = mesh_.parts[i];
+      const ozz::sample::Mesh::Part& part = mesh_.parts[i];
 
       // Setup vertex and influence counts.
       const int part_vertex_count = part.vertex_count();
@@ -331,7 +328,7 @@ class SkinSampleApplication : public ozz::sample::Application {
       return false;
     }
     ozz::io::IArchive archive(&file);
-    if (!archive.TestTag<ozz::sample::SkinnedMesh>()) {
+    if (!archive.TestTag<ozz::sample::Mesh>()) {
       ozz::log::Err() << "Failed to load mesh instance from file " <<
         filename << "." << std::endl;
       return false;
@@ -409,7 +406,7 @@ class SkinSampleApplication : public ozz::sample::Application {
 
   // The input mesh containing skinning information (joint indices, weights...).
   // This mesh is loaded from a file.
-  ozz::sample::SkinnedMesh mesh_;
+  ozz::sample::Mesh mesh_;
 };
 
 int main(int _argc, const char** _argv) {

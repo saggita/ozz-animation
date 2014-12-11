@@ -49,62 +49,10 @@
 #include "camera.h"
 #include "immediate.h"
 #include "shader.h"
-#include "framework/skin_mesh.h"
+#include "framework/mesh.h"
 
 namespace ozz {
 namespace sample {
-
-Renderer::Mesh::Mesh(int _vertex_count, int _index_count) {
-  // 3 positions + 3 normals + 1 color
-  vertices_ =
-    memory::default_allocator()->AllocateRange<char>(
-      sizeof(uint32_t) * _vertex_count * 7);
-  indices_ =
-    memory::default_allocator()->AllocateRange<uint16_t>(_index_count);
-}
-
-Renderer::Mesh::~Mesh() {
-  memory::default_allocator()->Deallocate(vertices_);
-  memory::default_allocator()->Deallocate(indices_);
-}
-
-Renderer::Mesh::Vertices Renderer::Mesh::vertices() const {
-  const Vertices buffer = {vertices_, 7 * sizeof(uint32_t)};
-  return buffer;
-}
-
-Renderer::Mesh::Positions Renderer::Mesh::positions() const {
-  const Positions buffer = {
-    Positions::DataRange(
-      reinterpret_cast<float*>(vertices_.begin + 0),
-      reinterpret_cast<const float*>(vertices_.end - sizeof(uint32_t) * 4)),
-    7 * sizeof(uint32_t)};
-  return buffer;
-}
-
-Renderer::Mesh::Normals Renderer::Mesh::normals() const {
-  const Normals buffer = {
-    Normals::DataRange(
-      reinterpret_cast<float*>(vertices_.begin + sizeof(uint32_t) * 3),
-      reinterpret_cast<const float*>(vertices_.end - sizeof(uint32_t) * 1)),
-    7 * sizeof(uint32_t)};
-  return buffer;
-}
-
-Renderer::Mesh::Colors Renderer::Mesh::colors() const {
-  const Colors buffer = {
-    Colors::DataRange(
-      reinterpret_cast<Color*>(vertices_.begin + sizeof(uint32_t) * 6),
-      reinterpret_cast<const Color*>(vertices_.end - 0)),
-    7 * sizeof(uint32_t)};
-  return buffer;  
-}
-
-Renderer::Mesh::Indices Renderer::Mesh::indices() const {
-  Mesh::Indices buffer = {indices_, 1 * sizeof(uint16_t)};
-  return buffer;
-}
-
 namespace internal {
 
 namespace {
@@ -678,50 +626,6 @@ bool RendererImpl::DrawBox(const ozz::math::Box& _box,
 
 bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
                             const Mesh& _mesh) {
-  // Maps the vertex dynamic buffer and update it.
-  GL(BindBuffer(GL_ARRAY_BUFFER, dynamic_array_vbo_));
-  ozz::sample::Renderer::Mesh::Vertices vertices_buffer = _mesh.vertices();
-  const size_t array_vbo_size = vertices_buffer.data.Size();
-  GL(BufferData(GL_ARRAY_BUFFER,
-                array_vbo_size,
-                vertices_buffer.data.begin,
-                GL_STREAM_DRAW));
-  
-  // Binds shader with this array buffer.
-  const GLsizei stride = static_cast<GLsizei>(vertices_buffer.stride);
-  mesh_shader_->Bind(_transform,
-                     camera()->view_proj(),
-                     stride, sizeof(float) * 0,
-                     stride, sizeof(float) * 3,
-                     stride, sizeof(float) * 6);
-
-  GL(BindBuffer(GL_ARRAY_BUFFER, 0));
-
-  // Maps the index dynamic buffer and update it.
-  GL(BindBuffer(GL_ELEMENT_ARRAY_BUFFER, dynamic_index_vbo_));
-  ozz::sample::Renderer::Mesh::Indices indices_buffer = _mesh.indices();
-  const GLsizei index_vbo_size =
-    static_cast<GLsizei>(indices_buffer.data.Size());
-  GL(BufferData(GL_ELEMENT_ARRAY_BUFFER,
-                index_vbo_size,
-                indices_buffer.data.begin,
-                GL_STREAM_DRAW));
-
-  // Draws the mesh.
-  GL(DrawElements(GL_TRIANGLES,
-                  index_vbo_size / sizeof(uint16_t),
-                  GL_UNSIGNED_SHORT,
-                  0));
-
-  // Unbinds.
-  GL(BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-  mesh_shader_->Unbind();
-
-  return true;
-}
-
-bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
-                            const SkinnedMesh& _mesh) {
 
   const int vertex_count = _mesh.vertex_count();
   const GLsizei positions_offset = 0;
@@ -742,7 +646,7 @@ bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
   // Iterate mesh parts and fills vbo.
   size_t vertex_offset = 0;
   for (size_t i = 0; i < _mesh.parts.size(); ++i) {
-    const SkinnedMesh::Part& part = _mesh.parts[i];
+    const Mesh::Part& part = _mesh.parts[i];
     const size_t part_vertex_count = part.positions.size() / 3;
 
     // Handles positions.
@@ -763,7 +667,7 @@ bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
       // Un-optimal path used when the right number of normals is not provided.
       const float normal[3] = {0.f, 1.f, 0.f};
       OZZ_STATIC_ASSERT(sizeof(normal) == normals_stride);
-      for (int j = 0; j < part_vertex_count; ++j) {
+      for (size_t j = 0; j < part_vertex_count; ++j) {
         GL(BufferSubData(GL_ARRAY_BUFFER,
                          normals_offset + (vertex_offset + j) * normals_stride,
                          normals_stride,
@@ -783,7 +687,7 @@ bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
       // Un-optimal path used when the right number of colors is not provided.
       const uint8_t color[4] = {255, 255, 255, 255};
       OZZ_STATIC_ASSERT(sizeof(color) == colors_stride);
-      for (int j = 0; j < part_vertex_count; ++j) {
+      for (size_t j = 0; j < part_vertex_count; ++j) {
         GL(BufferSubData(GL_ARRAY_BUFFER,
                          colors_offset + (vertex_offset + j) * colors_stride,
                          colors_stride,
@@ -806,13 +710,14 @@ bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
 
   // Maps the index dynamic buffer and update it.
   GL(BindBuffer(GL_ELEMENT_ARRAY_BUFFER, dynamic_index_vbo_));
-  const ozz::Vector<uint16_t>::Std& indices = _mesh.triangle_indices;
+  const Mesh::TriangleIndices& indices = _mesh.triangle_indices;
   GL(BufferData(GL_ELEMENT_ARRAY_BUFFER,
-                indices.size() * sizeof(uint16_t),
+                indices.size() * sizeof(Mesh::TriangleIndices::value_type),
                 array_begin(indices),
                 GL_STREAM_DRAW));
 
   // Draws the mesh.
+  OZZ_STATIC_ASSERT(sizeof(Mesh::TriangleIndices::value_type) == 2);
   GL(DrawElements(GL_TRIANGLES,
                   static_cast<GLsizei>(indices.size()),
                   GL_UNSIGNED_SHORT,

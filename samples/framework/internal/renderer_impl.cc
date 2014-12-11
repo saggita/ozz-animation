@@ -49,6 +49,7 @@
 #include "camera.h"
 #include "immediate.h"
 #include "shader.h"
+#include "framework/skin_mesh.h"
 
 namespace ozz {
 namespace sample {
@@ -709,6 +710,111 @@ bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
   // Draws the mesh.
   GL(DrawElements(GL_TRIANGLES,
                   index_vbo_size / sizeof(uint16_t),
+                  GL_UNSIGNED_SHORT,
+                  0));
+
+  // Unbinds.
+  GL(BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+  mesh_shader_->Unbind();
+
+  return true;
+}
+
+bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
+                            const SkinnedMesh& _mesh) {
+
+  const int vertex_count = _mesh.vertex_count();
+  const GLsizei positions_offset = 0;
+  const GLsizei positions_stride = sizeof(float) * 3;
+  const GLsizei positions_size = vertex_count * positions_stride;
+  const GLsizei normals_offset = positions_offset + positions_size;
+  const GLsizei normals_stride = sizeof(float) * 3;
+  const GLsizei normals_size = vertex_count * normals_stride;
+  const GLsizei colors_offset = normals_offset + normals_size;
+  const GLsizei colors_stride = sizeof(uint8_t) * 4;
+  const GLsizei colors_size = vertex_count * colors_stride;
+
+  // Reallocate vertex buffer.
+  const GLsizei vbo_size = positions_size + normals_size + colors_size;
+  GL(BindBuffer(GL_ARRAY_BUFFER, dynamic_array_vbo_));
+  GL(BufferData(GL_ARRAY_BUFFER, vbo_size, NULL, GL_STREAM_DRAW));
+
+  // Iterate mesh parts and fills vbo.
+  size_t vertex_offset = 0;
+  for (size_t i = 0; i < _mesh.parts.size(); ++i) {
+    const SkinnedMesh::Part& part = _mesh.parts[i];
+    const size_t part_vertex_count = part.positions.size() / 3;
+
+    // Handles positions.
+    GL(BufferSubData(GL_ARRAY_BUFFER,
+                     positions_offset + vertex_offset * positions_stride,
+                     part_vertex_count * positions_stride,
+                     array_begin(part.positions)));
+
+    // Handles normals.
+    const size_t part_normal_count = part.normals.size() / 3;
+    if (part_vertex_count == part_normal_count) {
+      // Optimal path used when the right number of normals is provided.
+      GL(BufferSubData(GL_ARRAY_BUFFER,
+                       normals_offset + vertex_offset * normals_stride,
+                       part_normal_count * normals_stride,
+                       array_begin(part.normals)));
+    } else {
+      // Un-optimal path used when the right number of normals is not provided.
+      const float normal[3] = {0.f, 1.f, 0.f};
+      OZZ_STATIC_ASSERT(sizeof(normal) == normals_stride);
+      for (int j = 0; j < part_vertex_count; ++j) {
+        GL(BufferSubData(GL_ARRAY_BUFFER,
+                         normals_offset + (vertex_offset + j) * normals_stride,
+                         normals_stride,
+                         &normal));
+      }
+    }
+
+    // Handles colors.
+    const size_t part_color_count = part.colors.size() / 4;
+    if (part_vertex_count == part_color_count) {
+      // Optimal path used when the right number of colors is provided.
+      GL(BufferSubData(GL_ARRAY_BUFFER,
+        colors_offset + vertex_offset * colors_stride,
+        part_color_count * colors_stride,
+        array_begin(part.colors)));
+    } else {
+      // Un-optimal path used when the right number of colors is not provided.
+      const uint8_t color[4] = {255, 255, 255, 255};
+      OZZ_STATIC_ASSERT(sizeof(color) == colors_stride);
+      for (int j = 0; j < part_vertex_count; ++j) {
+        GL(BufferSubData(GL_ARRAY_BUFFER,
+                         colors_offset + (vertex_offset + j) * colors_stride,
+                         colors_stride,
+                         &color));
+      }
+    }
+
+    // Computes next loop offset.
+    vertex_offset += part_vertex_count;
+  }
+  
+  // Binds shader with this array buffer.
+  mesh_shader_->Bind(_transform,
+                     camera()->view_proj(),
+                     positions_stride, positions_offset,
+                     normals_stride, normals_offset,
+                     colors_stride, colors_offset);
+
+  GL(BindBuffer(GL_ARRAY_BUFFER, 0));
+
+  // Maps the index dynamic buffer and update it.
+  GL(BindBuffer(GL_ELEMENT_ARRAY_BUFFER, dynamic_index_vbo_));
+  const ozz::Vector<uint16_t>::Std& indices = _mesh.triangle_indices;
+  GL(BufferData(GL_ELEMENT_ARRAY_BUFFER,
+                indices.size() * sizeof(uint16_t),
+                array_begin(indices),
+                GL_STREAM_DRAW));
+
+  // Draws the mesh.
+  GL(DrawElements(GL_TRIANGLES,
+                  static_cast<GLsizei>(indices.size()),
                   GL_UNSIGNED_SHORT,
                   0));
 

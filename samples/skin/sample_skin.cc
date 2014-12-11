@@ -118,6 +118,9 @@ class SkinSampleApplication : public ozz::sample::Application {
   // renders.
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
 
+        _renderer->DrawMesh(ozz::math::Float4x4::identity(), mesh_);
+        
+/*
     // Builds skinning matrices, based on the output of the animation stage.
     for (int i = 0; i < skeleton_.num_joints(); ++i) {
       skinning_matrices_[i] = models_[i] * inverse_bind_pose_[i];
@@ -240,7 +243,7 @@ class SkinSampleApplication : public ozz::sample::Application {
     }
 
     _renderer->DrawMesh(ozz::math::Float4x4::identity(), mesh);
-
+*/
     return true;
   }
 

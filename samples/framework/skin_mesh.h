@@ -87,6 +87,7 @@ struct SkinnedMesh {
 
     ozz::Vector<float>::Std positions;
     ozz::Vector<float>::Std normals;
+    ozz::Vector<uint8_t>::Std colors;
     ozz::Vector<uint16_t>::Std joint_indices;
     ozz::Vector<float>::Std joint_weights;
   };

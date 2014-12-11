@@ -56,6 +56,7 @@ void Save(OArchive& _archive,
     const sample::SkinnedMesh::Part& part = _parts[i];
     _archive << part.positions;
     _archive << part.normals;
+    _archive << part.colors;
     _archive << part.joint_indices;
     _archive << part.joint_weights;
   }
@@ -71,6 +72,7 @@ void Load(IArchive& _archive,
     sample::SkinnedMesh::Part& part = _parts[i];
     _archive >> part.positions;
     _archive >> part.normals;
+    _archive >> part.colors;
     _archive >> part.joint_indices;
     _archive >> part.joint_weights;
   }

@@ -38,6 +38,9 @@ namespace animation { class Skeleton; }
 namespace math { struct Float4x4; struct Float3; struct Box; }
 namespace sample {
 
+// Sample framework mesh type.
+struct SkinnedMesh;
+
 // Defines renderer abstract interface.
 class Renderer {
  public:
@@ -127,6 +130,11 @@ class Renderer {
   // Renders a mesh at a specified location.
   virtual bool DrawMesh(const ozz::math::Float4x4& _transform,
                         const Mesh& _mesh) = 0;
+
+
+  // Renders a mesh at a specified location.
+  virtual bool DrawMesh(const ozz::math::Float4x4& _transform,
+                        const SkinnedMesh& _mesh) = 0;
 };
 }  // sample
 }  // ozz

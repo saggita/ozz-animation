@@ -665,12 +665,16 @@ bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
                        array_begin(part.normals)));
     } else {
       // Un-optimal path used when the right number of normals is not provided.
-      const float normal[3] = {0.f, 1.f, 0.f};
-      OZZ_STATIC_ASSERT(sizeof(normal) == normals_stride);
-      for (size_t j = 0; j < part_vertex_count; ++j) {
+      const float normal[][3] = {
+        {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f},
+        {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}};
+      OZZ_STATIC_ASSERT(sizeof(normal[0]) == normals_stride);
+      for (size_t j = 0; j < part_vertex_count; j += OZZ_ARRAY_SIZE(normal)) {
+        const size_t this_loop_count =
+          math::Min(OZZ_ARRAY_SIZE(normal), part_vertex_count - j);
         GL(BufferSubData(GL_ARRAY_BUFFER,
                          normals_offset + (vertex_offset + j) * normals_stride,
-                         normals_stride,
+                         normals_stride * this_loop_count,
                          &normal));
       }
     }
@@ -680,17 +684,22 @@ bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
     if (part_vertex_count == part_color_count) {
       // Optimal path used when the right number of colors is provided.
       GL(BufferSubData(GL_ARRAY_BUFFER,
-        colors_offset + vertex_offset * colors_stride,
-        part_color_count * colors_stride,
-        array_begin(part.colors)));
+                       colors_offset + vertex_offset * colors_stride,
+                       part_color_count * colors_stride,
+                       array_begin(part.colors)));
     } else {
       // Un-optimal path used when the right number of colors is not provided.
-      const uint8_t color[4] = {255, 255, 255, 255};
-      OZZ_STATIC_ASSERT(sizeof(color) == colors_stride);
-      for (size_t j = 0; j < part_vertex_count; ++j) {
+      const uint8_t color[][4] = {
+        {255, 255, 255, 255}, {255, 255, 255, 255}, {255, 255, 255, 255},
+        {255, 255, 255, 255}, {255, 255, 255, 255}, {255, 255, 255, 255},
+        {255, 255, 255, 255}, {255, 255, 255, 255}, {255, 255, 255, 255}};
+      OZZ_STATIC_ASSERT(sizeof(color[0]) == colors_stride);
+      for (size_t j = 0; j < part_vertex_count; j += OZZ_ARRAY_SIZE(color)) {
+        const size_t this_loop_count =
+          math::Min(OZZ_ARRAY_SIZE(color), part_vertex_count - j);
         GL(BufferSubData(GL_ARRAY_BUFFER,
                          colors_offset + (vertex_offset + j) * colors_stride,
-                         colors_stride,
+                         colors_stride * this_loop_count,
                          &color));
       }
     }

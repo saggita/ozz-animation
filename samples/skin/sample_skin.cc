@@ -117,7 +117,8 @@ class SkinSampleApplication : public ozz::sample::Application {
   // Build skinning matrices, transform mesh vertices using the SkinningJob and
   // renders.
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
-/*
+    _renderer->DrawMesh(ozz::math::Float4x4::identity(), mesh_);
+
     // Builds skinning matrices, based on the output of the animation stage.
     for (int i = 0; i < skeleton_.num_joints(); ++i) {
       skinning_matrices_[i] = models_[i] * inverse_bind_pose_[i];
@@ -127,8 +128,10 @@ class SkinSampleApplication : public ozz::sample::Application {
     // output of the skinning job. 
     const int vertex_count = mesh_.vertex_count();
     const int index_count = mesh_.triangle_index_count();
-    const int max_influences_count = mesh_.max_influences_count();
-    ozz::sample::Renderer::Mesh mesh(vertex_count, index_count);
+    ozz::sample::Mesh mesh;
+    mesh.parts.resize(1); // One single part with all vertices.
+    mesh.parts[0].positions.resize(vertex_count * 3);  // 3 floats per position.
+    mesh.parts[0].normals.resize(vertex_count * 3);  // 3 floats per normal.
 
     // Runs a skinning job per mesh part. Triangle indices are shared
     // across parts.
@@ -158,54 +161,44 @@ class SkinSampleApplication : public ozz::sample::Application {
       skinning_job.joint_matrices = skinning_matrices_;
 
       // Setup joint's indices.
-      skinning_job.joint_indices.begin = array_begin(part.joint_indices);
-      skinning_job.joint_indices.end = array_end(part.joint_indices);
+      skinning_job.joint_indices = make_range(part.joint_indices);
       skinning_job.joint_indices_stride = sizeof(uint16_t) * part_influences_count;
 
       // Setup joint's weights.
       if (part_influences_count > 1) {
-        skinning_job.joint_weights.begin = array_begin(part.joint_weights);
-        skinning_job.joint_weights.end = array_end(part.joint_weights);
+        skinning_job.joint_weights = make_range(part.joint_weights);
         skinning_job.joint_weights_stride = sizeof(float) * (part_influences_count - 1);
       }
 
       // Setup input positions, coming from the loaded mesh.
-      skinning_job.in_positions.begin = array_begin(part.positions);
-      skinning_job.in_positions.end = array_end(part.positions);
+      skinning_job.in_positions = make_range(part.positions);
       skinning_job.in_positions_stride = sizeof(float) * 3;
 
       // Setup output positions, coming from the rendering output mesh buffers.
       // We need to offset the buffer every loop.
-      ozz::sample::Renderer::Mesh::Positions pbuffer = mesh.positions();
-      float* positions = reinterpret_cast<float*>(
-        reinterpret_cast<uintptr_t>(pbuffer.data.begin) +
-        processed_vertex_count * pbuffer.stride);
-      skinning_job.out_positions.begin = positions;
+      skinning_job.out_positions.begin =
+        array_begin(mesh.parts[0].positions) + processed_vertex_count * 3;
       skinning_job.out_positions.end =
-        ozz::PointerStride(positions, pbuffer.stride * part_vertex_count);
-      skinning_job.out_positions_stride = pbuffer.stride;
+        skinning_job.out_positions.begin + part_vertex_count * 3;
+      skinning_job.out_positions_stride = sizeof(float) * 3;
 
       // Setup input normals, coming from the loaded mesh.
-      skinning_job.in_normals.begin = array_begin(part.normals);
-      skinning_job.in_normals.end = array_end(part.normals);
+      skinning_job.in_normals = make_range(part.normals);
       skinning_job.in_normals_stride = sizeof(float) * 3;
 
       // Setup output normals, coming from the rendering output mesh buffers.
       // We need to offset the buffer every loop.
-      ozz::sample::Renderer::Mesh::Normals nbuffer = mesh.normals();
-      float* normals = reinterpret_cast<float*>(
-        reinterpret_cast<uintptr_t>(nbuffer.data.begin) +
-        processed_vertex_count * nbuffer.stride);
-      skinning_job.out_normals.begin = normals;
+      skinning_job.out_normals.begin =
+        array_begin(mesh.parts[0].normals) + processed_vertex_count * 3;
       skinning_job.out_normals.end =
-        ozz::PointerStride(normals, nbuffer.stride * part_vertex_count);
-      skinning_job.out_normals_stride = nbuffer.stride;
+        skinning_job.out_normals.begin + part_vertex_count * 3;
+      skinning_job.out_normals_stride = sizeof(float) * 3;
 
       // Execute the job, which should succeed unless a parameter is invalid.
       if (!skinning_job.Run()) {
         return false;
       }
-
+      /*
       // Also fills colors for this part.
       // Note that usually vertex colors, like uv, should not be stored with
       // positions and normals in a dynamic vertex buffers, as they are static, 
@@ -215,6 +208,7 @@ class SkinSampleApplication : public ozz::sample::Application {
         ozz::PointerStride(cbuffer.data.begin,
                            cbuffer.stride * processed_vertex_count);
       ozz::sample::Renderer::Mesh::Color color = {255, 255, 255, 255};
+      const int max_influences_count = mesh_.max_influences_count();
       if (show_influences_count_) {
         color.red = static_cast<uint8_t>(
           skinning_job.influences_count * 255 / max_influences_count);
@@ -224,23 +218,21 @@ class SkinSampleApplication : public ozz::sample::Application {
       for (int j = 0; j < part_vertex_count; ++j) {
         *colors = color;
         colors = ozz::PointerStride(colors, cbuffer.stride);
-      }
+      }*/
 
       // Some more vertices were processed.
       processed_vertex_count += part_vertex_count;
     }
 
-    { // Indices
-      ozz::sample::Renderer::Mesh::Indices buffer = mesh.indices();
-      uint16_t* indices = buffer.data.begin;
+    { // Copy indices
+      mesh.triangle_indices.resize(index_count);
       for (int i = 0; i < index_count; ++i) {
-        *indices = mesh_.triangle_indices[i];
-        indices = ozz::PointerStride(indices, + buffer.stride);
+        mesh.triangle_indices[i] = mesh_.triangle_indices[i];
       }
     }
 
     _renderer->DrawMesh(ozz::math::Float4x4::identity(), mesh);
-*/
+
     return true;
   }
 

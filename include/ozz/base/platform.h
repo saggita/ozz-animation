@@ -118,7 +118,7 @@ struct Range {
       end(_end) {
   }
   // Construct a range from a pointer to a buffer and its size, ie its number of elements.
-  Range(_Ty* _begin, ptrdiff_t _size)
+  Range(_Ty* _begin, size_t _size)
     : begin(_begin),
       end(_begin + _size) {
   }

@@ -46,6 +46,7 @@
 #include "ozz/base/log.h"
 
 #include "framework/imgui.h"
+#include "framework/mesh.h"
 
 namespace ozz {
 namespace sample {
@@ -209,6 +210,28 @@ bool LoadAnimation(const char* _filename,
   archive >> *_animation;
 
   return true;
+}
+
+bool LoadMesh(const char* _filename,
+              ozz::sample::Mesh* _mesh) {
+  assert(_filename && _mesh);
+  ozz::log::Out() << "Loading mesh archive: " << _filename <<
+    "." << std::endl;
+  ozz::io::File file(_filename, "rb");
+  if (!file.opened()) {
+    ozz::log::Err() << "Failed to open mesh file " << _filename <<
+      "." << std::endl;
+    return false;
+  }
+  ozz::io::IArchive archive(&file);
+  if (!archive.TestTag<ozz::sample::Mesh>()) {
+    ozz::log::Err() << "Failed to load mesh instance from file " <<
+      _filename << "." << std::endl;
+    return false;
+  }
+
+  // Once the tag is validated, reading cannot fail.
+  archive >> *_mesh;
 }
 }  // sample
 }  // ozz

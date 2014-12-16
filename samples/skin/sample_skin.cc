@@ -123,15 +123,6 @@ class SkinSampleApplication : public ozz::sample::Application {
       skinning_matrices_[i] = models_[i] * inverse_bind_pose_[i];
     }
 
-    // Prepares rendering mesh, which allocates the buffers that are filled as
-    // output of the skinning job. 
-    const int vertex_count = input_mesh_.vertex_count();
-    const int index_count = input_mesh_.triangle_index_count();
-
-    rendering_mesh_.parts.resize(1); // One single part with all vertices.
-    rendering_mesh_.parts[0].positions.resize(vertex_count * 3);  // 3 floats per position.
-    rendering_mesh_.parts[0].normals.resize(vertex_count * 3);  // 3 floats per normal.
-
     // Runs a skinning job per mesh part. Triangle indices are shared
     // across parts.
     int processed_vertex_count = 0;
@@ -223,13 +214,6 @@ class SkinSampleApplication : public ozz::sample::Application {
       processed_vertex_count += part_vertex_count;
     }
 
-    { // Copy indices
-      rendering_mesh_.triangle_indices.resize(index_count);
-      for (int i = 0; i < index_count; ++i) {
-        rendering_mesh_.triangle_indices[i] = input_mesh_.triangle_indices[i];
-      }
-    }
-
     _renderer->DrawMesh(ozz::math::Float4x4::identity(), rendering_mesh_);
 
     return true;
@@ -270,6 +254,10 @@ class SkinSampleApplication : public ozz::sample::Application {
       return false;
     }
 
+    if (!PrepareRenderingMesh()) {
+      return false;
+    }
+
     return true;
   }
 
@@ -294,6 +282,28 @@ class SkinSampleApplication : public ozz::sample::Application {
     // Invert matrices in-place.
     for (int i = 0; i < num_joints; ++i) {
       inverse_bind_pose_[i] = Invert(inverse_bind_pose_[i]);
+    }
+
+    return true;
+  }
+
+  // Prepares rendering mesh, which allocates the buffers that are filled as
+  // output of the skinning job.
+  // The sample uses sample framework mesh for rendering, but a real-world
+  // rendering engine would expose dynamic vertex buffers.
+  bool PrepareRenderingMesh() {
+
+    // Setup vertex buffers
+    const int vertex_count = input_mesh_.vertex_count();
+    const int index_count = input_mesh_.triangle_index_count();
+    rendering_mesh_.parts.resize(1); // One single part with all vertices.
+    rendering_mesh_.parts[0].positions.resize(vertex_count * 3);  // 3 floats per position.
+    rendering_mesh_.parts[0].normals.resize(vertex_count * 3);  // 3 floats per normal.
+
+    // Copy indices.
+    rendering_mesh_.triangle_indices.resize(index_count);
+    for (int i = 0; i < index_count; ++i) {
+      rendering_mesh_.triangle_indices[i] = input_mesh_.triangle_indices[i];
     }
 
     return true;

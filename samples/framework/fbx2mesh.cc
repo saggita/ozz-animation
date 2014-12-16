@@ -495,25 +495,25 @@ int main(int _argc, const char** _argv) {
     }
   }
 
-  FbxMesh* mesh = scene_loader.scene()->GetSrcObject<FbxMesh>(0);
+  FbxMesh* fbx_mesh = scene_loader.scene()->GetSrcObject<FbxMesh>(0);
 
-  ozz::sample::Mesh skinned_mesh;
-  skinned_mesh.parts.resize(1);
-  ozz::sample::Mesh::Part& skinned_mesh_part = skinned_mesh.parts[0];
-  if (!BuildVertices(mesh, &skinned_mesh_part)) {
+  ozz::sample::Mesh mesh;
+  mesh.parts.resize(1);
+  ozz::sample::Mesh::Part& mesh_part = mesh.parts[0];
+  if (!BuildVertices(fbx_mesh, &mesh_part)) {
     return EXIT_FAILURE;
   }
 
-  if (!BuildSkin(mesh, skeleton, &skinned_mesh_part)) {
+  if (!BuildSkin(fbx_mesh, skeleton, &mesh_part)) {
     return EXIT_FAILURE;
   }
 
-  if (!BuildTriangleIndices(mesh, &skinned_mesh)) {
+  if (!BuildTriangleIndices(fbx_mesh, &mesh)) {
     return EXIT_FAILURE;
   }
 
   ozz::sample::Mesh partitioned_meshes;
-  if (!SplitParts(skinned_mesh, &partitioned_meshes)) {
+  if (!SplitParts(mesh, &partitioned_meshes)) {
     return EXIT_FAILURE;
   }
 

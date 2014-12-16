@@ -117,7 +117,6 @@ class SkinSampleApplication : public ozz::sample::Application {
   // Build skinning matrices, transform mesh vertices using the SkinningJob and
   // renders.
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
-    _renderer->DrawMesh(ozz::math::Float4x4::identity(), mesh_);
 
     // Builds skinning matrices, based on the output of the animation stage.
     for (int i = 0; i < skeleton_.num_joints(); ++i) {
@@ -126,18 +125,18 @@ class SkinSampleApplication : public ozz::sample::Application {
 
     // Prepares rendering mesh, which allocates the buffers that are filled as
     // output of the skinning job. 
-    const int vertex_count = mesh_.vertex_count();
-    const int index_count = mesh_.triangle_index_count();
-    ozz::sample::Mesh mesh;
-    mesh.parts.resize(1); // One single part with all vertices.
-    mesh.parts[0].positions.resize(vertex_count * 3);  // 3 floats per position.
-    mesh.parts[0].normals.resize(vertex_count * 3);  // 3 floats per normal.
+    const int vertex_count = input_mesh_.vertex_count();
+    const int index_count = input_mesh_.triangle_index_count();
+
+    rendering_mesh_.parts.resize(1); // One single part with all vertices.
+    rendering_mesh_.parts[0].positions.resize(vertex_count * 3);  // 3 floats per position.
+    rendering_mesh_.parts[0].normals.resize(vertex_count * 3);  // 3 floats per normal.
 
     // Runs a skinning job per mesh part. Triangle indices are shared
     // across parts.
     int processed_vertex_count = 0;
-    for (size_t i = 0; i < mesh_.parts.size(); ++i) {
-      const ozz::sample::Mesh::Part& part = mesh_.parts[i];
+    for (size_t i = 0; i < input_mesh_.parts.size(); ++i) {
+      const ozz::sample::Mesh::Part& part = input_mesh_.parts[i];
 
       // Setup vertex and influence counts.
       const int part_vertex_count = part.vertex_count();
@@ -177,7 +176,7 @@ class SkinSampleApplication : public ozz::sample::Application {
       // Setup output positions, coming from the rendering output mesh buffers.
       // We need to offset the buffer every loop.
       skinning_job.out_positions.begin =
-        array_begin(mesh.parts[0].positions) + processed_vertex_count * 3;
+        array_begin(rendering_mesh_.parts[0].positions) + processed_vertex_count * 3;
       skinning_job.out_positions.end =
         skinning_job.out_positions.begin + part_vertex_count * 3;
       skinning_job.out_positions_stride = sizeof(float) * 3;
@@ -189,7 +188,7 @@ class SkinSampleApplication : public ozz::sample::Application {
       // Setup output normals, coming from the rendering output mesh buffers.
       // We need to offset the buffer every loop.
       skinning_job.out_normals.begin =
-        array_begin(mesh.parts[0].normals) + processed_vertex_count * 3;
+        array_begin(rendering_mesh_.parts[0].normals) + processed_vertex_count * 3;
       skinning_job.out_normals.end =
         skinning_job.out_normals.begin + part_vertex_count * 3;
       skinning_job.out_normals_stride = sizeof(float) * 3;
@@ -225,13 +224,13 @@ class SkinSampleApplication : public ozz::sample::Application {
     }
 
     { // Copy indices
-      mesh.triangle_indices.resize(index_count);
+      rendering_mesh_.triangle_indices.resize(index_count);
       for (int i = 0; i < index_count; ++i) {
-        mesh.triangle_indices[i] = mesh_.triangle_indices[i];
+        rendering_mesh_.triangle_indices[i] = input_mesh_.triangle_indices[i];
       }
     }
 
-    _renderer->DrawMesh(ozz::math::Float4x4::identity(), mesh);
+    _renderer->DrawMesh(ozz::math::Float4x4::identity(), rendering_mesh_);
 
     return true;
   }
@@ -260,12 +259,12 @@ class SkinSampleApplication : public ozz::sample::Application {
     cache_ = allocator->New<ozz::animation::SamplingCache>(num_joints);
 
     // Reading mesh.
-    if (!ozz::sample::LoadMesh(OPTIONS_mesh, &mesh_)) {
+    if (!ozz::sample::LoadMesh(OPTIONS_mesh, &input_mesh_)) {
       return false;
     }
 
     // Init default value for influences count limitation option.
-    limit_influences_count_ = mesh_.max_influences_count();
+    limit_influences_count_ = input_mesh_.max_influences_count();
 
     if (!BuildInverseBindPose()) {
       return false;
@@ -325,7 +324,7 @@ class SkinSampleApplication : public ozz::sample::Application {
         char label[32];
         sprintf(label, "Limit influences: %d", limit_influences_count_);
         _im_gui->DoSlider(label,
-                          1, mesh_.max_influences_count(),
+                          1, input_mesh_.max_influences_count(),
                           &limit_influences_count_);
         _im_gui->DoCheckBox("Show influences", &show_influences_count_);
       }
@@ -375,7 +374,13 @@ class SkinSampleApplication : public ozz::sample::Application {
 
   // The input mesh containing skinning information (joint indices, weights...).
   // This mesh is loaded from a file.
-  ozz::sample::Mesh mesh_;
+  ozz::sample::Mesh input_mesh_;
+
+  // The rendering mesh, filled with skinned vertices outputted from the
+  // SkinningJob stage.
+  // In a proper rendering engine (not a sample), this would be implemented with
+  // dynamic vertex buffers.
+  ozz::sample::Mesh rendering_mesh_;
 };
 
 int main(int _argc, const char** _argv) {

@@ -5,11 +5,16 @@ if(ozz_build_fbx)
   add_executable(sample_fbx2mesh
     fbx2mesh.cc)
   target_link_libraries(sample_fbx2mesh
+    sample_framework
     ozz_animation_fbx
     ozz_animation_offline
-    sample_framework)
+    ozz_animation
+    ozz_options
+    ozz_base)
   set_target_properties(sample_fbx2mesh
     PROPERTIES FOLDER "samples/tools")
+  
+  install(TARGETS sample_fbx2mesh DESTINATION bin/samples/tools)
 
   add_custom_command(TARGET sample_fbx2mesh POST_BUILD
     DEPENDS

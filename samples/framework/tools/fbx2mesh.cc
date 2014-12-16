@@ -50,14 +50,6 @@
 
 #include "fbxsdk/utils/fbxgeometryconverter.h"
 
-// fbx2mesh is a command line tool that converts a mesh imported from a
-// fbx document to ozz runtime mesh format.
-// fbx2mesh is part of the sample framework, and not intended to be used for
-// production purpose.
-//
-// Use fbx2mesh integrated help command (fbx2mesh --help) for more details
-// about available arguments.
-
 // Declares command line options.
 OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies the skeleton that the skin is bound to.", "", true)
@@ -503,25 +495,25 @@ int main(int _argc, const char** _argv) {
     }
   }
 
-  FbxMesh* fbx_mesh = scene_loader.scene()->GetSrcObject<FbxMesh>(0);
+  FbxMesh* mesh = scene_loader.scene()->GetSrcObject<FbxMesh>(0);
 
-  ozz::sample::Mesh mesh;
-  mesh.parts.resize(1);
-  ozz::sample::Mesh::Part& mesh_part = mesh.parts[0];
-  if (!BuildVertices(fbx_mesh, &mesh_part)) {
+  ozz::sample::Mesh skinned_mesh;
+  skinned_mesh.parts.resize(1);
+  ozz::sample::Mesh::Part& skinned_mesh_part = skinned_mesh.parts[0];
+  if (!BuildVertices(mesh, &skinned_mesh_part)) {
     return EXIT_FAILURE;
   }
 
-  if (!BuildSkin(fbx_mesh, skeleton, &mesh_part)) {
+  if (!BuildSkin(mesh, skeleton, &skinned_mesh_part)) {
     return EXIT_FAILURE;
   }
 
-  if (!BuildTriangleIndices(fbx_mesh, &mesh)) {
+  if (!BuildTriangleIndices(mesh, &skinned_mesh)) {
     return EXIT_FAILURE;
   }
 
   ozz::sample::Mesh partitioned_meshes;
-  if (!SplitParts(mesh, &partitioned_meshes)) {
+  if (!SplitParts(skinned_mesh, &partitioned_meshes)) {
     return EXIT_FAILURE;
   }
 

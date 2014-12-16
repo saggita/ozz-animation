@@ -41,5 +41,5 @@ endif()
 
 set_target_properties(sample_framework
   PROPERTIES FOLDER "samples")
-
+  
 add_subdirectory(tools)

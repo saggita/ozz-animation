@@ -53,7 +53,7 @@
 // Declares command line options.
 OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies the skeleton that the skin is bound to.", "", true)
-OZZ_OPTIONS_DECLARE_STRING(skin, "Specifies ozz skin ouput file.", "", true)
+OZZ_OPTIONS_DECLARE_STRING(mesh, "Specifies ozz mesh ouput file.", "", true)
 
 bool BuildVertices(FbxMesh* _mesh, ozz::sample::Mesh::Part* _skinned_mesh_part) {
 
@@ -522,15 +522,15 @@ int main(int _argc, const char** _argv) {
   }
 
   // Opens output file.
-  ozz::io::File skin_file(OPTIONS_skin, "wb");
-  if (!skin_file.opened()) {
-    ozz::log::Err() << "Failed to open output file: " << OPTIONS_skin.value() <<
+  ozz::io::File mesh_file(OPTIONS_mesh, "wb");
+  if (!mesh_file.opened()) {
+    ozz::log::Err() << "Failed to open output file: " << OPTIONS_mesh.value() <<
       std::endl;
     return EXIT_FAILURE;
   }
 
   { // Serialize the partitioned mesh.
-    ozz::io::OArchive archive(&skin_file);
+    ozz::io::OArchive archive(&mesh_file);
     archive << partitioned_meshes;
   }
 

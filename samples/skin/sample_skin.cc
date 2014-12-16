@@ -260,7 +260,7 @@ class SkinSampleApplication : public ozz::sample::Application {
     cache_ = allocator->New<ozz::animation::SamplingCache>(num_joints);
 
     // Reading mesh.
-    if (!LoadSkinMesh()) {
+    if (!ozz::sample::LoadMesh(OPTIONS_mesh, &mesh_)) {
       return false;
     }
 
@@ -307,29 +307,6 @@ class SkinSampleApplication : public ozz::sample::Application {
     allocator->Deallocate(skinning_matrices_);
     allocator->Deallocate(inverse_bind_pose_);
     allocator->Delete(cache_);
-  }
-
-  bool LoadSkinMesh() {
-    const char* filename = OPTIONS_mesh;
-    ozz::log::Out() << "Loading mesh archive: " << filename <<
-      "." << std::endl;
-    ozz::io::File file(filename, "rb");
-    if (!file.opened()) {
-      ozz::log::Err() << "Failed to open mesh file " << filename <<
-        "." << std::endl;
-      return false;
-    }
-    ozz::io::IArchive archive(&file);
-    if (!archive.TestTag<ozz::sample::Mesh>()) {
-      ozz::log::Err() << "Failed to load mesh instance from file " <<
-        filename << "." << std::endl;
-      return false;
-    }
-
-    // Once the tag is validated, reading cannot fail.
-    archive >> mesh_;
-
-    return true;
   }
 
   virtual bool OnGui(ozz::sample::ImGui* _im_gui) {

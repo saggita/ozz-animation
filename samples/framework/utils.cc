@@ -232,6 +232,8 @@ bool LoadMesh(const char* _filename,
 
   // Once the tag is validated, reading cannot fail.
   archive >> *_mesh;
+
+  return true;
 }
 }  // sample
 }  // ozz

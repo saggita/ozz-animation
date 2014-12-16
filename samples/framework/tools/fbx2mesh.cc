@@ -28,14 +28,12 @@
 //                                                                            //
 //============================================================================//
 
+#include "framework/mesh.h"
+
 #include "ozz/animation/offline/fbx/fbx.h"
 #include "ozz/animation/offline/fbx/fbx_base.h"
 
 #include "ozz/animation/runtime/skeleton.h"
-
-#include "fbxsdk/utils/fbxgeometryconverter.h"
-
-#include "mesh.h"
 
 #include "ozz/base/io/archive.h"
 #include "ozz/base/io/stream.h"
@@ -49,6 +47,8 @@
 #include "ozz/options/options.h"
 
 #include <algorithm>
+
+#include "fbxsdk/utils/fbxgeometryconverter.h"
 
 // Declares command line options.
 OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file.", "", true)

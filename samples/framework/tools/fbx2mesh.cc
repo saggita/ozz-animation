@@ -50,6 +50,14 @@
 
 #include "fbxsdk/utils/fbxgeometryconverter.h"
 
+// fbx2mesh is a command line tool that converts a mesh imported from a
+// fbx document to ozz runtime mesh format.
+// fbx2mesh is part of the sample framework, and not intended to be used for
+// production purpose.
+//
+// Use fbx2mesh integrated help command (fbx2mesh --help) for more details
+// about available arguments.
+
 // Declares command line options.
 OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies the skeleton that the skin is bound to.", "", true)

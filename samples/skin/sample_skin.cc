@@ -188,27 +188,6 @@ class SkinSampleApplication : public ozz::sample::Application {
       if (!skinning_job.Run()) {
         return false;
       }
-      /*
-      // Also fills colors for this part.
-      // Note that usually vertex colors, like uv, should not be stored with
-      // positions and normals in a dynamic vertex buffers, as they are static, 
-      // aka not affected by skinning.
-      ozz::sample::Renderer::Mesh::Colors cbuffer = mesh.colors();
-      ozz::sample::Renderer::Mesh::Color* colors =
-        ozz::PointerStride(cbuffer.data.begin,
-                           cbuffer.stride * processed_vertex_count);
-      ozz::sample::Renderer::Mesh::Color color = {255, 255, 255, 255};
-      const int max_influences_count = mesh_.max_influences_count();
-      if (show_influences_count_) {
-        color.red = static_cast<uint8_t>(
-          skinning_job.influences_count * 255 / max_influences_count);
-        color.green = 255 - color.red;
-        color.blue = 0;
-      }
-      for (int j = 0; j < part_vertex_count; ++j) {
-        *colors = color;
-        colors = ozz::PointerStride(colors, cbuffer.stride);
-      }*/
 
       // Some more vertices were processed.
       processed_vertex_count += part_vertex_count;
@@ -306,6 +285,48 @@ class SkinSampleApplication : public ozz::sample::Application {
       rendering_mesh_.triangle_indices[i] = input_mesh_.triangle_indices[i];
     }
 
+    return SetupVertexColors();
+  }
+
+  bool SetupVertexColors() {
+    // Makes sure color rendering buffer is big enough (4 uint8_t per vertex).
+    rendering_mesh_.parts[0].colors.resize(input_mesh_.vertex_count() * 4);
+
+    // Iterates parts and fills output color buffer.
+    int processed_vertex_count = 0;
+    for (size_t i = 0; i < input_mesh_.parts.size(); ++i) {
+      const ozz::sample::Mesh::Part& part = input_mesh_.parts[i];
+
+      uint8_t color[4] = {255, 255, 255, 255};
+      // Computes vertex color based on the number of influencing vertices.
+      if (show_influences_count_) {
+        const int max_influences_count = ozz::math::Clamp(
+          1,
+          input_mesh_.max_influences_count() - 1,
+          limit_influences_count_ - 1);
+        const int part_influences_count = ozz::math::Min(
+          limit_influences_count_, part.influences_count()) - 1;
+
+        color[0] = static_cast<uint8_t>(
+          part_influences_count * 255 / max_influences_count);
+        color[1] = 255 - color[0];
+        color[2] = 0;
+      }
+      const int part_vertex_count = part.vertex_count();
+      for (int j = processed_vertex_count;
+           j < processed_vertex_count + part_vertex_count;
+           ++j) {
+        uint8_t* output = &rendering_mesh_.parts[0].colors[j * 4];
+        output[0] = color[0];
+        output[1] = color[1];
+        output[2] = color[2];
+        output[3] = color[3];
+      }
+
+      // More vertices processed.
+      processed_vertex_count += part_vertex_count;
+    }
+
     return true;
   }
 
@@ -331,12 +352,18 @@ class SkinSampleApplication : public ozz::sample::Application {
       static bool open = true;
       ozz::sample::ImGui::OpenClose oc(_im_gui, "Skinning options", &open);
       if (open) {
+        bool colors_rebuild = false;
         char label[32];
         sprintf(label, "Limit influences: %d", limit_influences_count_);
-        _im_gui->DoSlider(label,
-                          1, input_mesh_.max_influences_count(),
-                          &limit_influences_count_);
-        _im_gui->DoCheckBox("Show influences", &show_influences_count_);
+        colors_rebuild |= _im_gui->DoSlider(
+          label,
+          1, input_mesh_.max_influences_count(), &limit_influences_count_);
+        colors_rebuild |= _im_gui->DoCheckBox("Show influences", &show_influences_count_);
+
+        // Rebuild vertex colors if an option has changed.
+        if (colors_rebuild) {
+          SetupVertexColors();
+        }
       }
     }
 

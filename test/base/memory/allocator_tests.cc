@@ -68,6 +68,9 @@ TEST(Range, Memory) {
   memset(range.begin, 0, sizeof(int) * 46);
 
   ozz::memory::default_allocator()->Deallocate(range);
+
+  EXPECT_TRUE(range.begin == NULL);
+  EXPECT_TRUE(range.end == NULL);
 }
 
 TEST(MallocCompliance, Memory) {

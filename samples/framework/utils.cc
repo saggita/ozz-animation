@@ -235,5 +235,91 @@ bool LoadMesh(const char* _filename,
 
   return true;
 }
+
+SkinningUpdater::SkinningUpdater()
+    : input_mesh_(NULL),
+      skinned_mesh_(NULL)
+{
+  ozz::memory::Allocator* allocator = ozz::memory::default_allocator();
+  input_mesh_ = allocator->New<Mesh>();
+  skinned_mesh_ = allocator->New<Mesh>();
+}
+
+SkinningUpdater::~SkinningUpdater() {
+  ozz::memory::Allocator* allocator = ozz::memory::default_allocator();
+  allocator->Delete(input_mesh_);
+  allocator->Delete(skinned_mesh_);
+  allocator->Deallocate(skinned_mesh_);
+}
+
+bool SkinningUpdater::Load(const char* _filename,
+                           const animation::Skeleton& _skeleton) {
+  // Reset current meshes.
+  *input_mesh_ = Mesh();
+  *skinned_mesh_ = Mesh();
+  ozz::memory::default_allocator()->Deallocate(inverse_bind_pose_matrices_);
+
+  // Load input mesh from file.
+  if (!LoadMesh(_filename, input_mesh_)) {
+    return false;
+  }
+
+  // Setup output/skinned mesh. Rendering mesh has a single part.
+  skinned_mesh_->parts.resize(1);
+  int vertex_count = input_mesh_->vertex_count();
+  skinned_mesh_->parts[0].positions.resize(vertex_count * 3);
+  skinned_mesh_->parts[0].normals.resize(vertex_count * 3);
+
+  // Copy vertex colors has they are not modified by skinning.
+  /*
+  int processed_vertex_count = 0;
+  for (size_t i = 0; i < input_mesh_->parts.size(); ++i) {
+    const ozz::sample::Mesh::Part& part = input_mesh_->parts[i];
+
+    uint8_t color[4] = {255, 255, 255, 255};
+    const int part_vertex_count = part.vertex_count();
+    for (int j = processed_vertex_count;
+      j < processed_vertex_count + part_vertex_count;
+      ++j) {
+        uint8_t* output = &rendering_mesh_.parts[0].colors[j * 4];
+        output[0] = color[0];
+        output[1] = color[1];
+        output[2] = color[2];
+        output[3] = color[3];
+    }
+
+    // More vertices processed.
+    processed_vertex_count += part_vertex_count;
+  }*/
+  /*
+  // Setup inverse bind pose matrices.
+  const int num_joints = skeleton_.num_joints();
+
+  // Build inverse bind-pose matrices, based on the input skeleton.
+  inverse_bind_pose_matrices_ = ozz::memory::default_allocator()->
+    AllocateRange<ozz::math::Float4x4>(num_joints);
+
+  // Convert skeleton bind-pose in local space to model-space matrices using
+  // the LocalToModelJob. Output is stored directly inside inverse_bind_pose_
+  // which will then be inverted in-place.
+  ozz::animation::LocalToModelJob ltm_job;
+  ltm_job.skeleton = &skeleton_;
+  ltm_job.input = skeleton_.bind_pose();
+  ltm_job.output = inverse_bind_pose_;
+  if (!ltm_job.Run()) {
+    return false;
+  }
+
+  // Invert matrices in-place.
+  for (int i = 0; i < num_joints; ++i) {
+    inverse_bind_pose_[i] = Invert(inverse_bind_pose_[i]);
+  }*/
+
+  return true;
+}
+
+bool SkinningUpdater::Update(const Range<const math::Float4x4>& _model_space_matrices) {
+  return true;
+}
 }  // sample
 }  // ozz

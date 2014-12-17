@@ -110,8 +110,9 @@ class Allocator {
   // Argument _range can be an empty (NULL) range.
   // Deallocate function conforms with standard free function specifications.
   template<typename _Ty>
-  void Deallocate(const Range<_Ty>& _range) {
+  void Deallocate(Range<_Ty>& _range) {
     Deallocate(_range.begin);
+    _range = Range<_Ty>();
   }
 
   // Changes the size of a block that was allocated with Allocate,

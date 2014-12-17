@@ -53,11 +53,8 @@ Animation::~Animation() {
 void Animation::Destroy() {
   memory::Allocator* allocator = memory::default_allocator();
   allocator->Deallocate(translations_);
-  translations_.begin = NULL; translations_.end = NULL;
   allocator->Deallocate(rotations_);
-  rotations_.begin = NULL; rotations_.end = NULL;
   allocator->Deallocate(scales_);
-  scales_.begin = NULL; scales_.end = NULL;
 
   duration_ = 0.f;
   num_tracks_ = 0;

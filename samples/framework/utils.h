@@ -138,31 +138,33 @@ bool LoadAnimation(const char* _filename,
 bool LoadMesh(const char* _filename,
               ozz::sample::Mesh* _mesh);
 
-/*
 class SkinningUpdater {
 public:
 
+  SkinningUpdater();
+  ~SkinningUpdater();
+
   bool Load(const char* _filename, const animation::Skeleton& _skeleton);
 
-  bool Update(Range<const math::Float4x4> _model_space_matrices);
+  bool Update(const Range<const math::Float4x4>& _model_space_matrices);
 
+  // Initialized after a valid call to Load.
   const Mesh& input_mesh() const {
-    return input_mesh_;
+    return *input_mesh_;
   }
 
-  // Only valid after a successful call to Update.
+  // Updated during a successful call to Update.
   const Mesh& skinned_mesh() const {
-    return skinned_mesh_;
+    return *skinned_mesh_;
   }
 
 private:
-  Mesh input_mesh_;
-  Mesh skinned_mesh_;
+  Mesh* input_mesh_;
+  Mesh* skinned_mesh_;
 
   // Computed from the skeleton.
-  Range<const math::Float4x4> inverse_bind_pose_matrices_;
+  Range<math::Float4x4> inverse_bind_pose_matrices_;
 };
-*/
 }  // sample
 }  // ozz
 #endif  // OZZ_SAMPLES_FRAMEWORK_UTILS_H_

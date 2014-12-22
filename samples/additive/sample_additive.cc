@@ -170,10 +170,12 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
   // Samples animation, transforms to model space and renders.
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
 
+    // Update skinning with latest blending stage output.
     if (!skinning_updater.Update(models_)) {
       return false;
     }
 
+    // Renders skin.
     return _renderer->DrawMesh(skinning_updater.skinned_mesh(),
                                ozz::math::Float4x4::identity());
   }

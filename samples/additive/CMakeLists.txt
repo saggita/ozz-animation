@@ -3,7 +3,7 @@ add_custom_command(
           "${ozz_media_directory}/bin/mesh.ozz"
           "${ozz_media_directory}/collada/alain/skeleton.dae"
           "${ozz_media_directory}/collada/alain/walk.dae"
-          "${ozz_media_directory}/collada/alain/hit_r.dae"
+          "${ozz_media_directory}/collada/alain/crackhead.dae"
           dae2skel
           dae2anim
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/README"
@@ -24,7 +24,7 @@ add_custom_command(
     "--animation=media/walk.ozz"
   COMMAND dae2anim
     "--additive"
-    "--file=${ozz_media_directory}/collada/alain/hit_r.dae"
+    "--file=${ozz_media_directory}/collada/alain/crackhead.dae"
     "--skeleton=${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
     "--animation=${CMAKE_CURRENT_BINARY_DIR}/media/additive.ozz")
 

@@ -279,29 +279,16 @@ bool SkinningUpdater::Load(const char* _filename,
   int vertex_count = input_mesh_->vertex_count();
   skinned_mesh_->parts[0].positions.resize(vertex_count * 3);
   skinned_mesh_->parts[0].normals.resize(vertex_count * 3);
-  skinned_mesh_->parts[0].colors.resize(vertex_count * 4);
 
   // Copy vertex colors at initialization, has they are not modified by skinning.
-  int processed_vertex_count = 0;
-  for (size_t i = 0; i < input_mesh_->parts.size(); ++i) {
-    const ozz::sample::Mesh::Part& part = input_mesh_->parts[i];
-
-    const uint8_t color[4] = {255, 255, 255, 255};
-    const int part_vertex_count = part.vertex_count();
-
-    for (int j = processed_vertex_count;
-         j < processed_vertex_count + part_vertex_count;
-         ++j) {
-      uint8_t* output = &skinned_mesh_->parts[0].colors[j * 4];
-      output[0] = color[0];
-      output[1] = color[1];
-      output[2] = color[2];
-      output[3] = color[3];
-    }
-
-    // More vertices processed.
-    processed_vertex_count += part_vertex_count;
+  Mesh::Part::Colors& colors = skinned_mesh_->parts[0].colors;
+  colors.resize(vertex_count * 4);
+  for (size_t i = 0; i < colors.size(); ++i) {
+    colors[i] = 255;
   }
+
+  // Copy indices
+  skinned_mesh_->triangle_indices = input_mesh_->triangle_indices;
 
   // Setup inverse bind pose matrices.
   const int num_joints = _skeleton.num_joints();

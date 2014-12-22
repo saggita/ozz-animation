@@ -151,7 +151,6 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
       return false;
     }
 
-    // Converts from local space to model space matrices.
     // Gets the ouput of the blending stage, and converts it to model space.
 
     // Setup local-to-model conversion job.
@@ -174,10 +173,9 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     if (!skinning_updater.Update(models_)) {
       return false;
     }
-  
+
     return _renderer->DrawMesh(skinning_updater.skinned_mesh(),
                                ozz::math::Float4x4::identity());
-
   }
 
   virtual bool OnInitialize() {
@@ -187,6 +185,12 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     if (!ozz::sample::LoadSkeleton(OPTIONS_skeleton, &skeleton_)) {
         return false;
     }
+
+    // Reading skinned mesh.
+    if (!skinning_updater.Load(OPTIONS_mesh, skeleton_)) {
+      return false;
+    }
+
     const int num_joints = skeleton_.num_joints();
     const int num_soa_joints = skeleton_.num_soa_joints();
 
@@ -234,11 +238,6 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
       }
     }
     SetupPerJointWeights();
-
-    // Reading skinned mesh.
-    if (!skinning_updater.Load(OPTIONS_mesh, skeleton_)) {
-      return false;
-    }
 
     return true;
   }

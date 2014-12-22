@@ -75,6 +75,13 @@ OZZ_OPTIONS_DECLARE_STRING(
   "media/additive.ozz",
   false)
 
+// Additive animation archive can be specified as an option.
+OZZ_OPTIONS_DECLARE_STRING(
+  mesh,
+  "Path to the skinned mesh (ozz archive format).",
+  "media/mesh.ozz",
+  false)
+
 class AdditiveBlendSampleApplication : public ozz::sample::Application {
  public:
   AdditiveBlendSampleApplication()
@@ -163,9 +170,14 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
 
   // Samples animation, transforms to model space and renders.
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
-    return _renderer->DrawPosture(skeleton_,
-                                  models_,
-                                  ozz::math::Float4x4::identity());
+
+    if (!skinning_updater.Update(models_)) {
+      return false;
+    }
+  
+    return _renderer->DrawMesh(skinning_updater.skinned_mesh(),
+                               ozz::math::Float4x4::identity());
+
   }
 
   virtual bool OnInitialize() {
@@ -222,6 +234,11 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
       }
     }
     SetupPerJointWeights();
+
+    // Reading skinned mesh.
+    if (!skinning_updater.Load(OPTIONS_mesh, skeleton_)) {
+      return false;
+    }
 
     return true;
   }
@@ -403,6 +420,8 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
   // Buffer of model space matrices. These are computed by the local-to-model
   // job after the blending stage.
   ozz::Range<ozz::math::Float4x4> models_;
+
+  ozz::sample::SkinningUpdater skinning_updater;
 };
 
 int main(int _argc, const char** _argv) {

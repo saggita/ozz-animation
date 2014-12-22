@@ -251,16 +251,19 @@ SkinningUpdater::~SkinningUpdater() {
   ozz::memory::Allocator* allocator = ozz::memory::default_allocator();
   allocator->Delete(input_mesh_);
   allocator->Delete(skinned_mesh_);
-  allocator->Deallocate(skinning_matrices_);
   allocator->Deallocate(inverse_bind_pose_);
+  allocator->Deallocate(skinning_matrices_);
 }
 
 bool SkinningUpdater::Load(const char* _filename,
                            const animation::Skeleton& _skeleton) {
-  // Reset current meshes.
+  assert(input_mesh_ && skinned_mesh_);
+
+  // Reset current data.
   *input_mesh_ = Mesh();
   *skinned_mesh_ = Mesh();
   ozz::memory::default_allocator()->Deallocate(inverse_bind_pose_);
+  ozz::memory::default_allocator()->Deallocate(skinning_matrices_);
 
   // Load input mesh from file.
   if (!LoadMesh(_filename, input_mesh_)) {
@@ -276,28 +279,29 @@ bool SkinningUpdater::Load(const char* _filename,
   int vertex_count = input_mesh_->vertex_count();
   skinned_mesh_->parts[0].positions.resize(vertex_count * 3);
   skinned_mesh_->parts[0].normals.resize(vertex_count * 3);
+  skinned_mesh_->parts[0].colors.resize(vertex_count * 4);
 
-  // Copy vertex colors has they are not modified by skinning.
-  /*
+  // Copy vertex colors at initialization, has they are not modified by skinning.
   int processed_vertex_count = 0;
   for (size_t i = 0; i < input_mesh_->parts.size(); ++i) {
     const ozz::sample::Mesh::Part& part = input_mesh_->parts[i];
 
-    uint8_t color[4] = {255, 255, 255, 255};
+    const uint8_t color[4] = {255, 255, 255, 255};
     const int part_vertex_count = part.vertex_count();
+
     for (int j = processed_vertex_count;
-      j < processed_vertex_count + part_vertex_count;
-      ++j) {
-        uint8_t* output = &skinned_mesh_->parts[0].colors[j * 4];
-        output[0] = color[0];
-        output[1] = color[1];
-        output[2] = color[2];
-        output[3] = color[3];
+         j < processed_vertex_count + part_vertex_count;
+         ++j) {
+      uint8_t* output = &skinned_mesh_->parts[0].colors[j * 4];
+      output[0] = color[0];
+      output[1] = color[1];
+      output[2] = color[2];
+      output[3] = color[3];
     }
 
     // More vertices processed.
     processed_vertex_count += part_vertex_count;
-  }*/
+  }
 
   // Setup inverse bind pose matrices.
   const int num_joints = _skeleton.num_joints();
@@ -329,11 +333,11 @@ bool SkinningUpdater::Load(const char* _filename,
   return true;
 }
 
-bool SkinningUpdater::Update(const Range<math::Float4x4>& _model_space_matrices) {
+bool SkinningUpdater::Update(const Range<math::Float4x4>& _model_space) {
   assert(input_mesh_ && skinned_mesh_);
 
-  // Ensures input matrices buffer has the crrect size.
-  const size_t joints_count = _model_space_matrices.Count();
+  // Ensures input matrices buffer has the correct size.
+  const size_t joints_count = _model_space.Count();
   if (joints_count != skinning_matrices_.Count()) {
     return false;
   }
@@ -345,7 +349,7 @@ bool SkinningUpdater::Update(const Range<math::Float4x4>& _model_space_matrices)
 
   // Builds skinning matrices, based on the output of the animation stage.
   for (size_t i = 0; i < joints_count; ++i) {
-    skinning_matrices_[i] = _model_space_matrices[i] * inverse_bind_pose_[i];
+    skinning_matrices_[i] = _model_space[i] * inverse_bind_pose_[i];
   }
 
   // Runs a skinning job per mesh part. Triangle indices are shared
@@ -396,12 +400,12 @@ bool SkinningUpdater::Update(const Range<math::Float4x4>& _model_space_matrices)
       skinning_job.out_positions.begin + part_vertex_count * 3;
     skinning_job.out_positions_stride = sizeof(float) * 3;
 
-    // Setup input normals, coming from the loaded mesh.
-    skinning_job.in_normals = make_range(part.normals);
-    skinning_job.in_normals_stride = sizeof(float) * 3;
+    // Setup normals if input are provided.
+    if (part.normals.size() != 0) {
+      // Setup input normals, coming from the loaded mesh.
+      skinning_job.in_normals = make_range(part.normals);
+      skinning_job.in_normals_stride = sizeof(float) * 3;
 
-    // Setup output normals if input are provided.
-    if (skinning_job.in_normals.begin) {
       // Setup output normals, coming from the rendering output mesh buffers.
       // We need to offset the buffer every loop.
       skinning_job.out_normals.begin =

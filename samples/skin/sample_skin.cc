@@ -193,7 +193,7 @@ class SkinSampleApplication : public ozz::sample::Application {
       processed_vertex_count += part_vertex_count;
     }
 
-    _renderer->DrawMesh(ozz::math::Float4x4::identity(), rendering_mesh_);
+    _renderer->DrawMesh(rendering_mesh_, ozz::math::Float4x4::identity());
 
     return true;
   }

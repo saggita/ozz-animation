@@ -109,8 +109,8 @@ class RendererImpl : public Renderer {
                        const ozz::math::Float4x4& _transform,
                        const Color _colors[2]);
 
-  virtual bool DrawMesh(const ozz::math::Float4x4& _transform,
-                        const Mesh& _mesh);
+  virtual bool DrawMesh(const Mesh& _mesh,
+                        const ozz::math::Float4x4& _transform);
 
   // Get GL immediate renderer implementation;
   GlImmediateRenderer* immediate_renderer() const {

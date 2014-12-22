@@ -87,8 +87,8 @@ class Renderer {
                        const Color _colors[2]) = 0;
 
   // Renders a mesh at a specified location.
-  virtual bool DrawMesh(const ozz::math::Float4x4& _transform,
-                        const Mesh& _mesh) = 0;
+  virtual bool DrawMesh(const Mesh& _mesh,
+                        const ozz::math::Float4x4& _transform) = 0;
 };
 }  // sample
 }  // ozz

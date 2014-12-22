@@ -624,8 +624,8 @@ bool RendererImpl::DrawBox(const ozz::math::Box& _box,
   return true;
 }
 
-bool RendererImpl::DrawMesh(const ozz::math::Float4x4& _transform,
-                            const Mesh& _mesh) {
+bool RendererImpl::DrawMesh(const Mesh& _mesh,
+                            const ozz::math::Float4x4& _transform) {
 
   const int vertex_count = _mesh.vertex_count();
   const GLsizei positions_offset = 0;

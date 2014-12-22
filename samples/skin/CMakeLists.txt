@@ -25,11 +25,7 @@ add_executable(sample_skin
   "${CMAKE_CURRENT_BINARY_DIR}/media/mesh.ozz")
 
 target_link_libraries(sample_skin
-  sample_framework
-  ozz_geometry
-  ozz_animation
-  ozz_options
-  ozz_base)
+  sample_framework)
 
 set_target_properties(sample_skin
   PROPERTIES FOLDER "samples")

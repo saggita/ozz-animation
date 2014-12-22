@@ -5,12 +5,9 @@ if(ozz_build_fbx)
   add_executable(sample_fbx2mesh
     fbx2mesh.cc)
   target_link_libraries(sample_fbx2mesh
-    sample_framework
     ozz_animation_fbx
     ozz_animation_offline
-    ozz_animation
-    ozz_options
-    ozz_base)
+    sample_framework)
   set_target_properties(sample_fbx2mesh
     PROPERTIES FOLDER "samples/tools")
 

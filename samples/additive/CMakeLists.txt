@@ -31,10 +31,7 @@ add_executable(sample_additive
   "${CMAKE_CURRENT_BINARY_DIR}/media/walk.ozz"
   "${CMAKE_CURRENT_BINARY_DIR}/media/additive.ozz")
 target_link_libraries(sample_additive
-  sample_framework
-  ozz_animation
-  ozz_options
-  ozz_base)
+  sample_framework)
 
 set_target_properties(sample_additive
   PROPERTIES FOLDER "samples")

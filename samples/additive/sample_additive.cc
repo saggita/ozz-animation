@@ -51,6 +51,7 @@
 #include "framework/renderer.h"
 #include "framework/imgui.h"
 #include "framework/utils.h"
+#include "framework/mesh.h"
 
 #include <cstring>
 
@@ -171,13 +172,15 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
 
     // Update skinning with latest blending stage output.
-    if (!skinning_updater.Update(models_)) {
+    if (!skinning_matrices_updater_.Update(models_)) {
       return false;
     }
 
     // Renders skin.
-    return _renderer->DrawMesh(skinning_updater.skinned_mesh(),
-                               ozz::math::Float4x4::identity());
+    return _renderer->DrawSkinnedMesh(
+      mesh_,
+      skinning_matrices_updater_.skinning_matrices(),
+      ozz::math::Float4x4::identity());
   }
 
   virtual bool OnInitialize() {
@@ -189,7 +192,12 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     }
 
     // Reading skinned mesh.
-    if (!skinning_updater.Load(OPTIONS_mesh, skeleton_)) {
+    if (!ozz::sample::LoadMesh(OPTIONS_mesh, &mesh_)) {
+      return false;
+    }
+
+    // Initialize skinning matrices updater utility.
+    if (!skinning_matrices_updater_.Initialize(skeleton_)) {
       return false;
     }
 
@@ -422,7 +430,12 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
   // job after the blending stage.
   ozz::Range<ozz::math::Float4x4> models_;
 
-  ozz::sample::SkinningUpdater skinning_updater;
+  // The mesh used by the sample.
+  ozz::sample::Mesh mesh_;
+
+  // Utility class that computes skinning matrices from a skeleton and its
+  // model space matrices.
+  ozz::sample::SkinningMatricesUpdater skinning_matrices_updater_;
 };
 
 int main(int _argc, const char** _argv) {

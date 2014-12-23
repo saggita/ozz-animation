@@ -138,30 +138,25 @@ bool LoadAnimation(const char* _filename,
 bool LoadMesh(const char* _filename,
               ozz::sample::Mesh* _mesh);
 
-class SkinningUpdater {
+class SkinningMatricesUpdater {
 public:
 
-  SkinningUpdater();
-  ~SkinningUpdater();
+  SkinningMatricesUpdater();
+  ~SkinningMatricesUpdater();
 
-  bool Load(const char* _filename, const animation::Skeleton& _skeleton);
+  bool Initialize(const animation::Skeleton& _skeleton);
 
-  bool Update(const Range<math::Float4x4>& _model_space_matrices);
+  bool Update(const Range<math::Float4x4> _model_space);
 
-  // Initialized after a valid call to Load.
-  const Mesh& input_mesh() const {
-    return *input_mesh_;
+  const Range<math::Float4x4>& skinning_matrices() const {
+    return skinning_matrices_;
   }
 
-  // Updated during a successful call to Update.
-  const Mesh& skinned_mesh() const {
-    return *skinned_mesh_;
+  const Range<math::Float4x4>& inverse_bind_pose() const {
+    return inverse_bind_pose_;
   }
 
 private:
-  Mesh* input_mesh_;
-  Mesh* skinned_mesh_;
-
   // Inverse skeleton bind pose matrices.
   Range<math::Float4x4> inverse_bind_pose_;
 

@@ -86,6 +86,11 @@ class Renderer {
                        const ozz::math::Float4x4& _transform,
                        const Color _colors[2]) = 0;
 
+  // Renders a skinned mesh at a specified location.
+  virtual bool DrawSkinnedMesh(const Mesh& _mesh,
+                               const Range<math::Float4x4> _skinning_matrices,
+                               const ozz::math::Float4x4& _transform) = 0;
+
   // Renders a mesh at a specified location.
   virtual bool DrawMesh(const Mesh& _mesh,
                         const ozz::math::Float4x4& _transform) = 0;

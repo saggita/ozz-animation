@@ -820,7 +820,7 @@ bool RendererImpl::DrawSkinnedMesh(const Mesh& _mesh,
     const ozz::sample::Mesh::Part& part = _mesh.parts[i];
 
     // Skip this iteration if no vertex.
-    const int part_vertex_count = part.vertex_count();
+    const size_t part_vertex_count = part.positions.size() / 3;
     if (part_vertex_count == 0) {
       continue;
     }
@@ -861,6 +861,11 @@ bool RendererImpl::DrawSkinnedMesh(const Mesh& _mesh,
     skinning_job.out_positions_stride = positions_stride;
 
     // Setup normals if input are provided.
+    float* out_normal_begin = reinterpret_cast<float*>(ozz::PointerStride(
+      vbo_map, normals_offset + processed_vertex_count * normals_stride));
+    const float* out_normal_end = ozz::PointerStride(
+      out_normal_begin, part_vertex_count * normals_stride);
+
     if (part.normals.size() == part.positions.size()) {
       // Setup input normals, coming from the loaded mesh.
       skinning_job.in_normals = make_range(part.normals);
@@ -868,14 +873,18 @@ bool RendererImpl::DrawSkinnedMesh(const Mesh& _mesh,
 
       // Setup output normals, coming from the rendering output mesh buffers.
       // We need to offset the buffer every loop.
-      skinning_job.out_normals.begin = reinterpret_cast<float*>(
-        ozz::PointerStride(
-          vbo_map, normals_offset + processed_vertex_count * normals_stride));
-      skinning_job.out_normals.end = ozz::PointerStride(
-        skinning_job.out_normals.begin, part_vertex_count * normals_stride);
+      skinning_job.out_normals.begin = out_normal_begin;
+      skinning_job.out_normals.end = out_normal_end;
       skinning_job.out_normals_stride = normals_stride;
     } else {
-      // Setup default normals.
+      // Fills output with default normals.
+      for (float* normal = out_normal_begin;
+           normal < out_normal_end;
+           normal = ozz::PointerStride(normal, normals_stride)) {
+        normal[0] = 0.f;
+        normal[1] = 1.f;
+        normal[2] = 0.f;
+      }
     }
 
     // Execute the job, which should succeed unless a parameter is invalid.

@@ -28,6 +28,8 @@
 //                                                                            //
 //============================================================================//
 
+#include "framework/mesh.h"
+
 #include "ozz/animation/runtime/skeleton.h"
 #include "ozz/animation/runtime/animation.h"
 #include "ozz/animation/runtime/sampling_job.h"
@@ -54,12 +56,6 @@
 #include "framework/renderer.h"
 #include "framework/imgui.h"
 #include "framework/utils.h"
-
-<<<<<<< HEAD
-#include "framework/mesh.h"
-=======
-#include "framework/skin_mesh.h"
->>>>>>> Move skin mesh and tools to sample framework.
 
 // Skeleton archive can be specified as an option.
 OZZ_OPTIONS_DECLARE_STRING(

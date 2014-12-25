@@ -5,6 +5,13 @@ Release version 0.8.0.----------------------------------------------------------
  # Build pipeline
   - Adds and support -wextra option on gcc/clang.
 
+Release version 0.7.1.----------------------------------------------------------
+
+ # Library
+  - [offline] Updates to fbx sdk 2015.1 with vs2013 support.
+ # Samples
+  - Adds sample_skin_fbx2skin to binary packages.
+
 Release version 0.7.0.----------------------------------------------------------
 
  # Library

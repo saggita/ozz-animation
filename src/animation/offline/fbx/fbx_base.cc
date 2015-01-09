@@ -118,11 +118,11 @@ FbxSceneLoader::FbxSceneLoader(const char* _filename,
     }
   }
 
-  if (initialized &&
-      importer->IsFBX())
-  {
-    ozz::log::Log() << "FBX version number for " << _filename << " is " <<
-      major << "." << minor<< "." << revision << "." << std::endl;
+  if (initialized) {
+    if ( importer->IsFBX()) {
+      ozz::log::Log() << "FBX version number for " << _filename << " is " <<
+        major << "." << minor<< "." << revision << "." << std::endl;
+    }
 
     // Load the scene.
     scene_ = FbxScene::Create(_manager,"ozz scene");
@@ -141,6 +141,8 @@ FbxSceneLoader::FbxSceneLoader(const char* _filename,
          importer->GetStatus().GetCode() == FbxStatus::ePasswordError)
       {
         ozz::log::Err() << "Incorrect password." << std::endl;
+
+        // scene_ will be destroyed because imported is false.
       }
     }
     

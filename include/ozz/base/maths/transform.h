@@ -42,7 +42,7 @@ namespace math {
 // attributes.
 struct Transform {
 
-  // Transplation affine transformation component.
+  // Translation affine transformation component.
   Float3 translation;
 
   // Rotation affine transformation component.

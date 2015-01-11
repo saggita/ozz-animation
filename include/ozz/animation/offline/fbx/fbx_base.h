@@ -33,6 +33,9 @@
 
 #include <fbxsdk.h>
 
+#include "ozz/base/maths/simd_math.h"
+#include "ozz/base/maths/transform.h"
+
 namespace ozz {
 namespace math {
 struct Transform;
@@ -94,6 +97,32 @@ public:
   FbxSkeletonIOSettings(const FbxManagerInstance& _manager);
 };
 
+class FbxSystemConverter {
+ public:
+  FbxSystemConverter(
+    const FbxAxisSystem& _from_axis, const FbxSystemUnit& _from_unit,
+    const FbxAxisSystem& _to_axis, const FbxSystemUnit& _to_unit);
+
+  math::Float4x4 ConvertMatrix(const math::Float4x4& _m) const;
+
+  math::Float3 ConvertPoint(const math::Float3& _p) const;
+
+  math::Quaternion ConvertRotation(const math::Quaternion& _q) const;
+
+  math::Float3 ConvertScale(const math::Float3& _s) const;
+
+  math::Transform ConvertTransform(const math::Transform& _t) const;
+
+ private:
+
+  // The vector used to convert "from" unit to "to" metric system.
+  float convert_unit_;
+
+  // The matrix used to convert from "from" axis to "to" coordinate system
+  // base.
+  math::Float4x4 convert_axis;
+};
+
 // Loads a scene from a Fbx file.
 class FbxSceneLoader {
  public:
@@ -126,6 +155,9 @@ private:
   // Original axis and unit systems.
   FbxAxisSystem original_axis_system_;
   FbxSystemUnit original_system_unit_;
+
+  // Axis and unit conversion helper.
+  FbxSystemConverter* converter_;
 };
 
 // Evaluates default local transformation from a FbxNode

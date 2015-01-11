@@ -34,6 +34,8 @@
 
 #include "ozz/base/log.h"
 
+#include "ozz/base/memory/allocator.h"
+
 #include "ozz/base/maths/transform.h"
 
 namespace ozz {
@@ -70,9 +72,9 @@ FbxDefaultIOSettings::~FbxDefaultIOSettings() {
 FbxAnimationIOSettings::FbxAnimationIOSettings(const FbxManagerInstance& _manager)
     : FbxDefaultIOSettings(_manager) {
   settings()->SetBoolProp(IMP_FBX_MATERIAL, false);
-  settings()->SetBoolProp(EXP_FBX_TEXTURE, false);
-  settings()->SetBoolProp(EXP_FBX_MODEL, false);
-  settings()->SetBoolProp(EXP_FBX_SHAPE, false);
+  settings()->SetBoolProp(IMP_FBX_TEXTURE, false);
+  settings()->SetBoolProp(IMP_FBX_MODEL, false);
+  settings()->SetBoolProp(IMP_FBX_SHAPE, false);
   settings()->SetBoolProp(IMP_FBX_LINK, false);
   settings()->SetBoolProp(IMP_FBX_GOBO, false);
 }
@@ -80,9 +82,9 @@ FbxAnimationIOSettings::FbxAnimationIOSettings(const FbxManagerInstance& _manage
 FbxSkeletonIOSettings::FbxSkeletonIOSettings(const FbxManagerInstance& _manager)
     : FbxDefaultIOSettings(_manager) {
   settings()->SetBoolProp(IMP_FBX_MATERIAL, false);
-  settings()->SetBoolProp(EXP_FBX_TEXTURE, false);
-  settings()->SetBoolProp(EXP_FBX_MODEL, false);
-  settings()->SetBoolProp(EXP_FBX_SHAPE, false);
+  settings()->SetBoolProp(IMP_FBX_TEXTURE, false);
+  settings()->SetBoolProp(IMP_FBX_MODEL, false);
+  settings()->SetBoolProp(IMP_FBX_SHAPE, false);
   settings()->SetBoolProp(IMP_FBX_LINK, false);
   settings()->SetBoolProp(IMP_FBX_GOBO, false);
   settings()->SetBoolProp(IMP_FBX_ANIMATION, false);
@@ -145,22 +147,15 @@ FbxSceneLoader::FbxSceneLoader(const char* _filename,
         // scene_ will be destroyed because imported is false.
       }
     }
-    
-    // Get original axis and unit systems before doing the conversion.
-    FbxGlobalSettings& settings = scene_->GetGlobalSettings();
-    original_axis_system_ = settings.GetAxisSystem();
-    original_system_unit_ = settings.GetSystemUnit();
 
-    // Convert scene to ozz axis system (Right-handed, Y-up).
-    const FbxAxisSystem ozz_axis = ozz_axis_system();
-    if (ozz_axis != original_axis_system_) {
-      ozz_axis.ConvertScene(scene_);
-    }
-
-    // Convert scene to ozz unit system (meters).
-    const FbxSystemUnit ozz_unit  = ozz_system_unit();
-    if (ozz_unit != original_system_unit_) {
-      ozz_unit.ConvertScene(scene_);
+    // Setup axis and system converter.
+    if (imported) {
+      FbxGlobalSettings& settings = scene_->GetGlobalSettings();
+      converter_ = ozz::memory::default_allocator()->New<FbxSystemConverter>(
+        settings.GetAxisSystem(),
+        settings.GetSystemUnit(),
+        ozz_axis_system(),
+        ozz_system_unit());
     }
 
     // Clear the scene if import failed.
@@ -179,6 +174,11 @@ FbxSceneLoader::~FbxSceneLoader() {
     scene_->Destroy();
     scene_ = NULL;
   }
+
+  if (converter_) {
+    ozz::memory::default_allocator()->Delete(converter_);
+    converter_ = NULL;
+  }
 }
 
 FbxAxisSystem FbxSceneLoader::ozz_axis_system() const {
@@ -190,6 +190,156 @@ FbxAxisSystem FbxSceneLoader::ozz_axis_system() const {
 
 FbxSystemUnit FbxSceneLoader::ozz_system_unit() const {
   return FbxSystemUnit::m;
+}
+
+namespace {
+ozz::math::Float4x4 BuildSystemMatrix(const FbxAxisSystem& _system) {
+
+  int sign;
+  ozz::math::SimdFloat4 up = ozz::math::simd_float4::y_axis();
+  ozz::math::SimdFloat4 at = ozz::math::simd_float4::z_axis();
+
+  // The EUpVector specifies which axis has the up and down direction in the
+  // system (typically this is the Y or Z axis). The sign of the EUpVector is
+  // applied to represent the direction (1 is up and -1 is down relative to the
+  // observer).
+  const FbxAxisSystem::EUpVector eup = _system.GetUpVector(sign);
+  switch (eup) {
+    case FbxAxisSystem::eXAxis: {
+      up = math::simd_float4::Load(1.f * sign, 0.f, 0.f, 0.f);
+      // If the up axis is X, the remain two axes will be Y And Z, so the
+      // ParityEven is Y, and the ParityOdd is Z
+      if (_system.GetFrontVector(sign) == FbxAxisSystem::eParityEven) {
+        at = math::simd_float4::Load(0.f, 1.f * sign, 0.f, 0.f);
+      } else {
+        at = math::simd_float4::Load(0.f, 0.f, 1.f * sign, 0.f);
+      }
+      break;
+    }
+    case FbxAxisSystem::eYAxis: {
+      up = math::simd_float4::Load(0.f, 1.f * sign, 0.f, 0.f);
+      // If the up axis is Y, the remain two axes will X And Z, so the
+      // ParityEven is X, and the ParityOdd is Z
+      if (_system.GetFrontVector(sign) == FbxAxisSystem::eParityEven) {
+        at = math::simd_float4::Load(1.f * sign, 0.f, 0.f, 0.f);
+      } else {
+        at = math::simd_float4::Load(0.f, 0.f, 1.f * sign, 0.f);
+      }
+      break;
+    }
+    case FbxAxisSystem::eZAxis: {
+      up = math::simd_float4::Load(0.f, 0.f, 1.f * sign, 0.f);
+      // If the up axis is Z, the remain two axes will X And Y, so the
+      // ParityEven is X, and the ParityOdd is Y
+      if (_system.GetFrontVector(sign) == FbxAxisSystem::eParityEven) {
+        at = math::simd_float4::Load(1.f * sign, 0.f, 0.f, 0.f);
+      } else {
+        at = math::simd_float4::Load(0.f, 1.f * sign, 0.f, 0.f);
+      }
+      break;
+    }
+    default: {
+      assert(false && "Invalid FbxAxisSystem");
+      break;
+    }
+  }
+
+  // If the front axis and the up axis are determined, the third axis will be
+  // automatically determined as the left one. The ECoordSystem enum is a
+  // parameter to determine the direction of the third axis just as the
+  // EUpVector sign. It determines if the axis system is right-handed or
+  // left-handed just as the enum values.
+  ozz::math::SimdFloat4 right;
+  if (_system.GetCoorSystem() == FbxAxisSystem::eRightHanded) {
+    right = math::Cross3(up, at);
+  } else {
+    right = math::Cross3(at, up);
+  }
+
+  const ozz::math::Float4x4 matrix = {{
+    right, up, at, ozz::math::simd_float4::w_axis()}};
+
+  return matrix;
+}
+}
+
+FbxSystemConverter::FbxSystemConverter(const FbxAxisSystem& _from_axis,
+                                       const FbxSystemUnit& _from_unit,
+                                       const FbxAxisSystem& _to_axis,
+                                       const FbxSystemUnit& _to_unit) {
+  // Get scale factor to convert the two unit system.
+  convert_unit_ = static_cast<float>(_from_unit.GetConversionFactorTo(_to_unit));
+
+  // Build conversion matrix.
+  ozz::math::Float4x4 from = BuildSystemMatrix(_from_axis);
+  ozz::math::Float4x4 to = BuildSystemMatrix(_to_axis);
+  convert_axis = to * Invert(from);
+}
+
+math::Float4x4 FbxSystemConverter::ConvertMatrix(const math::Float4x4& _m) const {
+/*
+  math::Float4x4 ret = convert_matrix_ * _m;
+  ret.cols[3] = ret.cols[3] * convert_unit_;
+  return ret;
+*/
+  return _m;
+}
+
+math::Float3 FbxSystemConverter::ConvertPoint(const math::Float3& _p) const {
+/*
+  switch (up_axis_) {
+    case kXUp: return math::Float3(-_p.y * unit_, _p.x * unit_, _p.z * unit_);
+    case kYUp: return math::Float3(_p.x * unit_, _p.y * unit_, _p.z * unit_);
+    case kZUp: return math::Float3(_p.x * unit_, _p.z * unit_, -_p.y * unit_);
+    default: {
+      assert(false);
+      return _p;
+    }
+  }
+*/
+  return _p;
+}
+
+math::Quaternion FbxSystemConverter::ConvertRotation(
+  const math::Quaternion& _q) const {
+/*
+  switch (up_axis_) {
+    case kXUp: return math::Quaternion(-_q.y, _q.x, _q.z, _q.w);
+    case kYUp: return _q;
+    case kZUp: return math::Quaternion(_q.x, _q.z, -_q.y, _q.w);
+    default: {
+      assert(false);
+      return _q;
+    }
+  }
+*/
+  return _q;
+}
+
+math::Float3 FbxSystemConverter::ConvertScale(const math::Float3& _s) const {
+/*
+  switch (up_axis_) {
+    case kXUp: return math::Float3(_s.y, _s.x, _s.z);
+    case kYUp: return _s;
+    case kZUp: return math::Float3(_s.x, _s.z, _s.y);
+    default: {
+      assert(false);
+      return _s;
+    }
+  }
+*/
+  return _s;
+}
+
+math::Transform FbxSystemConverter::ConvertTransform(
+  const math::Transform& _t) const {
+/*
+  const math::Transform transform = {ConvertPoint(_t.translation),
+                                     ConvertRotation(_t.rotation),
+                                     ConvertScale(_t.scale)};
+  return transform;
+*/
+  return _t;
 }
 
 bool EvaluateDefaultLocalTransform(FbxNode* _node,

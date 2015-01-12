@@ -271,18 +271,40 @@ FbxSystemConverter::FbxSystemConverter(const FbxAxisSystem& _from_axis,
   convert_unit_ = static_cast<float>(_from_unit.GetConversionFactorTo(_to_unit));
 
   // Build conversion matrix.
-  ozz::math::Float4x4 from = BuildSystemMatrix(_from_axis);
-  ozz::math::Float4x4 to = BuildSystemMatrix(_to_axis);
-  convert_axis = to * Invert(from);
+  math::Float4x4 from =
+    BuildSystemMatrix(_from_axis) *
+    math::Float4x4::Scaling(math::simd_float4::Load1(_from_unit.GetScaleFactor() * .01f));
+  math::Float4x4 to =
+    BuildSystemMatrix(_to_axis) *
+    math::Float4x4::Scaling(math::simd_float4::Load1(_to_unit.GetScaleFactor() * .01f));
+  convert_ = from * Invert(to);
+}
+
+math::Float4x4 FbxSystemConverter::ConvertMatrix(const FbxAMatrix& _m) const {
+  const ozz::math::Float4x4 ret = {{
+    ozz::math::simd_float4::Load(static_cast<float>(_m[0][0]),
+                                 static_cast<float>(_m[0][1]),
+                                 static_cast<float>(_m[0][2]),
+                                 static_cast<float>(_m[0][3])),
+    ozz::math::simd_float4::Load(static_cast<float>(_m[1][0]),
+                                 static_cast<float>(_m[1][1]),
+                                 static_cast<float>(_m[1][2]),
+                                 static_cast<float>(_m[1][3])),
+    ozz::math::simd_float4::Load(static_cast<float>(_m[2][0]),
+                                 static_cast<float>(_m[2][1]),
+                                 static_cast<float>(_m[2][2]),
+                                 static_cast<float>(_m[2][3])),
+    ozz::math::simd_float4::Load(static_cast<float>(_m[3][0]),
+                                 static_cast<float>(_m[3][1]),
+                                 static_cast<float>(_m[3][2]),
+                                 static_cast<float>(_m[3][3])),
+  }};
+  return ConvertMatrix(ret);
 }
 
 math::Float4x4 FbxSystemConverter::ConvertMatrix(const math::Float4x4& _m) const {
-/*
-  math::Float4x4 ret = convert_matrix_ * _m;
-  ret.cols[3] = ret.cols[3] * convert_unit_;
+  math::Float4x4 ret = convert_ * _m * Invert(convert_);
   return ret;
-*/
-  return _m;
 }
 
 math::Float3 FbxSystemConverter::ConvertPoint(const math::Float3& _p) const {
@@ -342,17 +364,26 @@ math::Transform FbxSystemConverter::ConvertTransform(
   return _t;
 }
 
-bool EvaluateDefaultLocalTransform(FbxNode* _node,
-                                   bool _root,
-                                   ozz::math::Transform* _transform) {
-  FbxAMatrix matrix;
-  if (_root) {
-    matrix = _node->EvaluateGlobalTransform();
-  } else {
-    matrix = _node->EvaluateLocalTransform();
+math::Float4x4 FbxSystemConverter::EvaluateDefaultMatrix(FbxNode* _node,
+                                                         bool _root) const {
+  return ConvertMatrix(_root?_node->EvaluateGlobalTransform():
+                             _node->EvaluateLocalTransform());
+}
+
+ozz::math::Transform FbxSystemConverter::EvaluateDefaultTransform(FbxNode* _node,
+                                                                  bool _root) const {
+  math::Float4x4 matrix = EvaluateDefaultMatrix(_node, _root);
+
+  math::SimdFloat4 translation, rotation, scale;
+  if (ToAffine(matrix, &translation, &rotation, &scale)) {
+    ozz::math::Transform transform;
+    math::Store3PtrU(translation, &transform.translation.x);
+    math::StorePtrU(math::Normalize4(rotation), &transform.rotation.x);
+    math::Store3PtrU(scale, &transform.scale.x);
+    return transform;
   }
 
-  return FbxAMatrixToTransform(matrix, _transform);
+  return ozz::math::Transform::identity();
 }
 
 bool FbxAMatrixToTransform(const FbxAMatrix& _matrix,

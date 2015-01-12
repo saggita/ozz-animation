@@ -43,6 +43,7 @@ namespace fbx {
 
 namespace {
 bool RecurseNode(FbxNode* _node,
+                 FbxSystemConverter* _converter,
                  RawSkeleton* _skeleton,
                  RawSkeleton::Joint*
                  _parent,
@@ -70,13 +71,11 @@ bool RecurseNode(FbxNode* _node,
         this_joint->name = _node->GetName();
 
         // Outputs hierarchy on verbose stream.
-        for (int i = 0; i < _depth; ++i) {
-          ozz::log::LogV() << '.';
-        }
+        for (int i = 0; i < _depth; ++i) { ozz::log::LogV() << '.'; }
         ozz::log::LogV() << this_joint->name.c_str() << std::endl;
 
         // Extract bind pose.
-        EvaluateDefaultLocalTransform(_node, !_parent, &this_joint->transform);
+        this_joint->transform = _converter->EvaluateDefaultTransform(_node, !_parent);
 
         // One level deeper in the hierarchy.
         _depth++;
@@ -95,14 +94,14 @@ bool RecurseNode(FbxNode* _node,
   for (int i = 0; i < _node->GetChildCount(); i++)
   {
     FbxNode* child = _node->GetChild(i);
-    skeleton_found |= RecurseNode(child, _skeleton, this_joint, _depth);
+    skeleton_found |= RecurseNode(child, _converter, _skeleton, this_joint, _depth);
   }
   return skeleton_found;
 }
 }
 
-bool ExtractSkeleton(FbxScene* _scene, RawSkeleton* _skeleton) {
-  if (!RecurseNode(_scene->GetRootNode(), _skeleton, NULL, 0)) {
+bool ExtractSkeleton(FbxSceneLoader& _loader, RawSkeleton* _skeleton) {
+  if (!RecurseNode(_loader.scene()->GetRootNode(), _loader.converter(), _skeleton, NULL, 0)) {
     ozz::log::Err() << "No skeleton found in Fbx scene." << std::endl;
     return false;
   }

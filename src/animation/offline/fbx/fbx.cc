@@ -63,7 +63,7 @@ bool ImportFromFile(const char* _filename, RawSkeleton* _skeleton) {
     return false;
   }
 
-  if (!ExtractSkeleton(scene_loader.scene(), _skeleton)) {
+  if (!ExtractSkeleton(scene_loader, _skeleton)) {
     log::Err() << "Fbx skeleton extraction failed." << std::endl;
     return false;
   }

@@ -103,6 +103,11 @@ class FbxSystemConverter {
     const FbxAxisSystem& _from_axis, const FbxSystemUnit& _from_unit,
     const FbxAxisSystem& _to_axis, const FbxSystemUnit& _to_unit);
 
+  math::Float4x4 EvaluateDefaultMatrix(FbxNode* _node, bool _root) const;
+
+  ozz::math::Transform EvaluateDefaultTransform(FbxNode* _node, bool _root) const;
+
+  math::Float4x4 ConvertMatrix(const FbxAMatrix& _m) const;
   math::Float4x4 ConvertMatrix(const math::Float4x4& _m) const;
 
   math::Float3 ConvertPoint(const math::Float3& _p) const;
@@ -120,7 +125,7 @@ class FbxSystemConverter {
 
   // The matrix used to convert from "from" axis to "to" coordinate system
   // base.
-  math::Float4x4 convert_axis;
+  math::Float4x4 convert_;
 };
 
 // Loads a scene from a Fbx file.
@@ -135,6 +140,10 @@ class FbxSceneLoader {
 
   FbxScene* scene() const {
     return scene_;
+  }
+
+  FbxSystemConverter* converter() {
+    return converter_;
   }
 
   FbxAxisSystem ozz_axis_system() const;

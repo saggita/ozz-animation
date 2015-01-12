@@ -45,7 +45,7 @@ struct RawSkeleton;
 
 namespace fbx {
 
-bool ExtractSkeleton(FbxScene* _scene, RawSkeleton* _skeleton);
+bool ExtractSkeleton(FbxSceneLoader& _loader, RawSkeleton* _skeleton);
 
 }  // fbx
 }  // offline

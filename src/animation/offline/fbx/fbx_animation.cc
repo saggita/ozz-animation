@@ -38,6 +38,8 @@
 #include "ozz/base/log.h"
 
 #include "ozz/base/maths/transform.h"
+#include "ozz/base/maths/soa_transform.h"
+#include "ozz/base/maths/simd_math.h"
 
 namespace ozz {
 namespace animation {
@@ -59,7 +61,14 @@ bool ExtractAnimation(FbxScene* _scene,
     anim_stack->GetLocalTimeSpan().GetStart().GetSecondDouble());
   const float end = static_cast<float>(
     anim_stack->GetLocalTimeSpan().GetStop().GetSecondDouble());
-  _animation->duration = end - start;
+
+  // Animation duration could be 0 if it's just a pose. In this case we'll set a
+  // default 1s duration.
+  if (end > start) {
+    _animation->duration = end - start;
+  } else {
+    _animation->duration = 1.f;
+  }
 
   // Allocates all tracks with the same number of tracks as the skeleton.
   // Tracks that would not be found will remain empty (identity transformation).
@@ -83,7 +92,41 @@ bool ExtractAnimation(FbxScene* _scene,
     if (!node) {
       // Empty joint track.
       ozz::log::Err() << "No animation track found for joint \"" << joint_name
-        << "\"." << std::endl;
+        << "\". Using skeleton bind pose instead." << std::endl;
+
+      // Get soa bind pose3
+      const ozz::math::SoaTransform& soa_transform = _skeleton.bind_pose()[i / 4];
+
+      // Build aos bind pose3
+      ozz::math::SimdFloat4 translations[4];
+      ozz::math::SimdFloat4 rotations[4];
+      ozz::math::SimdFloat4 scales[4];
+
+      ozz::math::Transpose3x4(&soa_transform.translation.x, translations);
+      ozz::math::Transpose4x4(&soa_transform.rotation.x, rotations);
+      ozz::math::Transpose3x4(&soa_transform.scale.x, scales);
+
+      {
+        RawAnimation::TranslationKey key;
+        key.time = 0.f;
+        ozz::math::Store3PtrU(translations[i % 4], &key.value.x);
+        track.translations.push_back(key);
+      }
+
+      {
+        RawAnimation::RotationKey key;
+        key.time = 0.f;
+        ozz::math::StorePtrU(rotations[i % 4], &key.value.x);
+        track.rotations.push_back(key);
+      }
+
+      {
+        RawAnimation::ScaleKey key;
+        key.time = 0.f;
+        ozz::math::Store3PtrU(scales[i % 4], &key.value.x);
+        track.scales.push_back(key);
+      }
+
       continue;
     }
 
@@ -97,7 +140,7 @@ bool ExtractAnimation(FbxScene* _scene,
     track.scales.reserve(max_keys);
 
     // Evaluate joint transformation at the specified time.
-    // Make sure to include "end" time.
+    // Make sure to include "end" time, and loop once at least.
     bool loop_again = true;
     for (float t = start; loop_again; t += sampling_period) {
       if (t >= end) {
@@ -131,6 +174,9 @@ bool ExtractAnimation(FbxScene* _scene,
       track.scales.push_back(scale);
     }
   }
+
+  // Output animation must be valid at that point.
+  assert(_animation->Validate());
 
   return true;
 }

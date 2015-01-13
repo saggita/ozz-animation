@@ -118,6 +118,8 @@ class SkinSampleApplication : public ozz::sample::Application {
   // renders.
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
 
+    return _renderer->DrawSkeleton(skeleton_, ozz::math::Float4x4::identity());
+
     // Builds skinning matrices, based on the output of the animation stage.
     for (int i = 0; i < skeleton_.num_joints(); ++i) {
       skinning_matrices_[i] = models_[i] * inverse_bind_pose_[i];
@@ -366,7 +368,7 @@ class SkinSampleApplication : public ozz::sample::Application {
   }
 
   virtual void GetSceneBounds(ozz::math::Box* _bound) const {
-    ozz::sample::ComputePostureBounds(models_, _bound);
+    ozz::sample::ComputeSkeletonBounds(skeleton_, _bound);
   }
 
  private:

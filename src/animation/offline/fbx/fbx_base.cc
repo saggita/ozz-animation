@@ -151,11 +151,9 @@ FbxSceneLoader::FbxSceneLoader(const char* _filename,
     // Setup axis and system converter.
     if (imported) {
       FbxGlobalSettings& settings = scene_->GetGlobalSettings();
-      converter_ = ozz::memory::default_allocator()->New<FbxSystemConverter>(
-        settings.GetAxisSystem(),
-        settings.GetSystemUnit(),
-        ozz_axis_system(),
-        ozz_system_unit());
+      converter_ = ozz::memory::default_allocator()->
+        New<FbxSystemConverter>(settings.GetAxisSystem(),
+                                settings.GetSystemUnit());
     }
 
     // Clear the scene if import failed.
@@ -181,19 +179,8 @@ FbxSceneLoader::~FbxSceneLoader() {
   }
 }
 
-FbxAxisSystem FbxSceneLoader::ozz_axis_system() const {
-  const FbxAxisSystem ozz_axis(FbxAxisSystem::eYAxis,
-                               FbxAxisSystem::eParityOdd,
-                               FbxAxisSystem::eRightHanded);
-  return ozz_axis;
-}
-
-FbxSystemUnit FbxSceneLoader::ozz_system_unit() const {
-  return FbxSystemUnit::m;
-}
-
 namespace {
-ozz::math::Float4x4 BuildSystemMatrix(const FbxAxisSystem& _system) {
+ozz::math::Float4x4 BuildAxisSystemMatrix(const FbxAxisSystem& _system) {
 
   int sign;
   ozz::math::SimdFloat4 up = ozz::math::simd_float4::y_axis();
@@ -264,20 +251,17 @@ ozz::math::Float4x4 BuildSystemMatrix(const FbxAxisSystem& _system) {
 }
 
 FbxSystemConverter::FbxSystemConverter(const FbxAxisSystem& _from_axis,
-                                       const FbxSystemUnit& _from_unit,
-                                       const FbxAxisSystem& _to_axis,
-                                       const FbxSystemUnit& _to_unit) {
-  // Get scale factor to convert the two unit system.
-  convert_unit_ = static_cast<float>(_from_unit.GetConversionFactorTo(_to_unit));
+                                       const FbxSystemUnit& _from_unit) {
+  // Build axis system conversion matrix.
+  math::Float4x4 from = BuildAxisSystemMatrix(_from_axis);
 
-  // Build conversion matrix.
-  math::Float4x4 from =
-    BuildSystemMatrix(_from_axis) *
-    math::Float4x4::Scaling(math::simd_float4::Load1(_from_unit.GetScaleFactor() * .01f));
-  math::Float4x4 to =
-    BuildSystemMatrix(_to_axis) *
-    math::Float4x4::Scaling(math::simd_float4::Load1(_to_unit.GetScaleFactor() * .01f));
-  convert_ = from * Invert(to);
+  // Finds unit conversion ratio.
+  const float to_meters =
+    static_cast<float>(_from_unit.GetScaleFactor()) * .01f;
+
+  // Builds conversion matrix.
+  convert_ = Invert(from) *
+             math::Float4x4::Scaling(math::simd_float4::Load1(to_meters));
 }
 
 math::Float4x4 FbxSystemConverter::ConvertMatrix(const FbxAMatrix& _m) const {

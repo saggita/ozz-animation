@@ -39,8 +39,12 @@ endif()
 add_custom_command(
   DEPENDS "${CMAKE_CURRENT_LIST_DIR}/README"
           "${ozz_media_directory}/collada/alain/skeleton.dae"
+          "${ozz_media_directory}/collada/alain/skeleton_zup.dae"
           "${ozz_media_directory}/collada/alain/walk.dae"
           "${ozz_media_directory}/bin/mesh.ozz"
+          fbx2skel
+          fbx2anim
+          sample_skin_fbx2skin
           ${ozz_mesh_generation_dependency}
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/README"
          "${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
@@ -48,12 +52,17 @@ add_custom_command(
          "${CMAKE_CURRENT_BINARY_DIR}/media/mesh.ozz"
   COMMAND ${CMAKE_COMMAND} -E make_directory media
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_LIST_DIR}/README .
-  COMMAND ${CMAKE_COMMAND} -E copy "${ozz_media_directory}/bin/mesh.ozz"
-    "${CMAKE_CURRENT_BINARY_DIR}/media/mesh.ozz"
-  COMMAND ${CMAKE_COMMAND} -E copy "${ozz_media_directory}/bin/skeleton_v1_le.ozz"
-    "${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
-  COMMAND ${CMAKE_COMMAND} -E copy "${ozz_media_directory}/bin/animation_v2_le.ozz"
-    "${CMAKE_CURRENT_BINARY_DIR}/media/animation.ozz")
+  COMMAND fbx2skel
+    --file="C:/Program Files/Autodesk/FBX/FBX SDK/2015.1/samples/ViewScene/humanoid.fbx"
+    --skeleton="${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
+  COMMAND fbx2anim
+    --file="C:/Program Files/Autodesk/FBX/FBX SDK/2015.1/samples/ViewScene/humanoid.fbx"
+    --skeleton="${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
+    --animation="${CMAKE_CURRENT_BINARY_DIR}/media/animation.ozz"
+  COMMAND sample_skin_fbx2skin
+    --file="C:/Program Files/Autodesk/FBX/FBX SDK/2015.1/samples/ViewScene/humanoid.fbx"
+    --skeleton="${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
+    --skin="${CMAKE_CURRENT_BINARY_DIR}/media/mesh.ozz")
 
 add_executable(sample_skin
   sample_skin.cc

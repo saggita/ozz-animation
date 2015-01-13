@@ -99,9 +99,8 @@ public:
 
 class FbxSystemConverter {
  public:
-  FbxSystemConverter(
-    const FbxAxisSystem& _from_axis, const FbxSystemUnit& _from_unit,
-    const FbxAxisSystem& _to_axis, const FbxSystemUnit& _to_unit);
+  FbxSystemConverter(const FbxAxisSystem& _from_axis,
+                     const FbxSystemUnit& _from_unit);
 
   math::Float4x4 EvaluateDefaultMatrix(FbxNode* _node, bool _root) const;
 

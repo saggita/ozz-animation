@@ -290,19 +290,16 @@ math::Float4x4 FbxSystemConverter::ConvertMatrix(const math::Float4x4& _m) const
   return convert_ * _m * Invert(convert_);
 }
 
-math::Float3 FbxSystemConverter::ConvertPoint(const math::Float3& _p) const {
-/*
-  switch (up_axis_) {
-    case kXUp: return math::Float3(-_p.y * unit_, _p.x * unit_, _p.z * unit_);
-    case kYUp: return math::Float3(_p.x * unit_, _p.y * unit_, _p.z * unit_);
-    case kZUp: return math::Float3(_p.x * unit_, _p.z * unit_, -_p.y * unit_);
-    default: {
-      assert(false);
-      return _p;
-    }
-  }
-*/
-  return _p;
+math::Float3 FbxSystemConverter::ConvertPoint(const FbxVector4& _p) const {
+  const math::SimdFloat4 p_in =
+    math::simd_float4::Load(static_cast<float>(_p[0]),
+                            static_cast<float>(_p[1]),
+                            static_cast<float>(_p[2]),
+                            1.f);
+  const math::SimdFloat4 p_out = convert_ * p_in;
+  math::Float3 ret;
+  math::Store3PtrU(p_out, &ret.x);
+  return ret;
 }
 
 math::Quaternion FbxSystemConverter::ConvertRotation(

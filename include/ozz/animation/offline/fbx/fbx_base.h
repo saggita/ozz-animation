@@ -105,7 +105,7 @@ class FbxSystemConverter {
   math::Float4x4 ConvertMatrix(const FbxAMatrix& _m) const;
   math::Float4x4 ConvertMatrix(const math::Float4x4& _m) const;
 
-  math::Float3 ConvertPoint(const math::Float3& _p) const;
+  math::Float3 ConvertPoint(const FbxVector4& _p) const;
 
   math::Quaternion ConvertRotation(const math::Quaternion& _q) const;
 

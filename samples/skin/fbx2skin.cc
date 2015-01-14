@@ -55,30 +55,9 @@ OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies the skeleton that the skin is bound to.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skin, "Specifies ozz skin ouput file.", "", true)
 
-bool BuildVertices(FbxMesh* _mesh, ozz::sample::SkinnedMesh::Part* _skinned_mesh_part) {
-
-  // Get the matrices required to transform mesh in the right unit/axis system.
-  const FbxAMatrix fbx_point_transform = _mesh->GetNode()->EvaluateGlobalTransform();
-  const ozz::math::Float4x4 point_transform = {{
-    ozz::math::simd_float4::Load(static_cast<float>(fbx_point_transform[0][0]),
-      static_cast<float>(fbx_point_transform[0][1]),
-      static_cast<float>(fbx_point_transform[0][2]),
-      static_cast<float>(fbx_point_transform[0][3])),
-      ozz::math::simd_float4::Load(static_cast<float>(fbx_point_transform[1][0]),
-      static_cast<float>(fbx_point_transform[1][1]),
-      static_cast<float>(fbx_point_transform[1][2]),
-      static_cast<float>(fbx_point_transform[1][3])),
-      ozz::math::simd_float4::Load(static_cast<float>(fbx_point_transform[2][0]),
-      static_cast<float>(fbx_point_transform[2][1]),
-      static_cast<float>(fbx_point_transform[2][2]),
-      static_cast<float>(fbx_point_transform[2][3])),
-      ozz::math::simd_float4::Load(static_cast<float>(fbx_point_transform[3][0]),
-      static_cast<float>(fbx_point_transform[3][1]),
-      static_cast<float>(fbx_point_transform[3][2]),
-      static_cast<float>(fbx_point_transform[3][3])),
-  }};
-  ozz::math::Float4x4 vector_transform =
-    ozz::math::Transpose(ozz::math::Invert(point_transform));
+bool BuildVertices(FbxMesh* _mesh,
+                   ozz::animation::offline::fbx::FbxSystemConverter* _converter,
+                   ozz::sample::SkinnedMesh::Part* _skinned_mesh_part) {
 
   const int vertex_count = _mesh->GetControlPointsCount();
   _skinned_mesh_part->positions.resize(vertex_count * 3);
@@ -87,14 +66,10 @@ bool BuildVertices(FbxMesh* _mesh, ozz::sample::SkinnedMesh::Part* _skinned_mesh
   // Iterate through all vertices and stores position.
   const FbxVector4* control_points = _mesh->GetControlPoints();
   for (int v = 0; v < vertex_count; ++v) {
-    const FbxVector4 in = control_points[v];
-    const ozz::math::SimdFloat4 simd_in = ozz::math::simd_float4::Load(
-      static_cast<float>(in[0]),
-      static_cast<float>(in[1]),
-      static_cast<float>(in[2]),
-      1.f);
-    const ozz::math::SimdFloat4 transformed = point_transform * simd_in;
-    ozz::math::Store3PtrU(transformed, &_skinned_mesh_part->positions[v * 3]);
+    const ozz::math::Float3 pos = _converter->ConvertPoint(control_points[v]);
+    _skinned_mesh_part->positions[v * 3 + 0] = pos.x;
+    _skinned_mesh_part->positions[v * 3 + 1] = pos.y;
+    _skinned_mesh_part->positions[v * 3 + 2] = pos.z;
   }
 
   // Normals could be flipped.
@@ -114,7 +89,7 @@ bool BuildVertices(FbxMesh* _mesh, ozz::sample::SkinnedMesh::Part* _skinned_mesh
         static_cast<float>(in[2]) * ccw_multiplier,
         0.f);
       const ozz::math::SimdFloat4 transformed =
-        ozz::math::Normalize3(vector_transform * simd_in);
+        ozz::math::Normalize3(/*vector_transform * */simd_in);
       ozz::math::Store3PtrU(transformed, &_skinned_mesh_part->normals[v * 3]);
     }
   } else {
@@ -500,7 +475,7 @@ int main(int _argc, const char** _argv) {
   ozz::sample::SkinnedMesh skinned_mesh;
   skinned_mesh.parts.resize(1);
   ozz::sample::SkinnedMesh::Part& skinned_mesh_part = skinned_mesh.parts[0];
-  if (!BuildVertices(mesh, &skinned_mesh_part)) {
+  if (!BuildVertices(mesh, scene_loader.converter(), &skinned_mesh_part)) {
     return EXIT_FAILURE;
   }
 

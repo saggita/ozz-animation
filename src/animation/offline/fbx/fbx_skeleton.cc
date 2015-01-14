@@ -75,7 +75,9 @@ bool RecurseNode(FbxNode* _node,
         ozz::log::LogV() << this_joint->name.c_str() << std::endl;
 
         // Extract bind pose.
-        this_joint->transform = _converter->EvaluateDefaultTransform(_node, !_parent);
+        this_joint->transform =
+          _converter->ConvertTransform(_parent?_node->EvaluateLocalTransform():
+                                               _node->EvaluateGlobalTransform());
 
         // One level deeper in the hierarchy.
         _depth++;

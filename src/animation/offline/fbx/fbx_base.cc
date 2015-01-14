@@ -253,14 +253,14 @@ ozz::math::Float4x4 BuildAxisSystemMatrix(const FbxAxisSystem& _system) {
 FbxSystemConverter::FbxSystemConverter(const FbxAxisSystem& _from_axis,
                                        const FbxSystemUnit& _from_unit) {
   // Build axis system conversion matrix.
-  math::Float4x4 from = BuildAxisSystemMatrix(_from_axis);
+  const math::Float4x4 from_matrix = BuildAxisSystemMatrix(_from_axis);
 
-  // Finds unit conversion ratio.
+  // Finds unit conversion ratio to meters, where GetScaleFactor() is in cm.
   const float to_meters =
     static_cast<float>(_from_unit.GetScaleFactor()) * .01f;
 
   // Builds conversion matrix.
-  convert_ = Invert(from) *
+  convert_ = Invert(from_matrix) *
              math::Float4x4::Scaling(math::simd_float4::Load1(to_meters));
 }
 
@@ -287,8 +287,7 @@ math::Float4x4 FbxSystemConverter::ConvertMatrix(const FbxAMatrix& _m) const {
 }
 
 math::Float4x4 FbxSystemConverter::ConvertMatrix(const math::Float4x4& _m) const {
-  math::Float4x4 ret = convert_ * _m * Invert(convert_);
-  return ret;
+  return convert_ * _m * Invert(convert_);
 }
 
 math::Float3 FbxSystemConverter::ConvertPoint(const math::Float3& _p) const {
@@ -337,26 +336,8 @@ math::Float3 FbxSystemConverter::ConvertScale(const math::Float3& _s) const {
   return _s;
 }
 
-math::Transform FbxSystemConverter::ConvertTransform(
-  const math::Transform& _t) const {
-/*
-  const math::Transform transform = {ConvertPoint(_t.translation),
-                                     ConvertRotation(_t.rotation),
-                                     ConvertScale(_t.scale)};
-  return transform;
-*/
-  return _t;
-}
-
-math::Float4x4 FbxSystemConverter::EvaluateDefaultMatrix(FbxNode* _node,
-                                                         bool _root) const {
-  return ConvertMatrix(_root?_node->EvaluateGlobalTransform():
-                             _node->EvaluateLocalTransform());
-}
-
-ozz::math::Transform FbxSystemConverter::EvaluateDefaultTransform(FbxNode* _node,
-                                                                  bool _root) const {
-  math::Float4x4 matrix = EvaluateDefaultMatrix(_node, _root);
+math::Transform FbxSystemConverter::ConvertTransform(const FbxAMatrix& _m) const {
+  const math::Float4x4 matrix = ConvertMatrix(_m);
 
   math::SimdFloat4 translation, rotation, scale;
   if (ToAffine(matrix, &translation, &rotation, &scale)) {
@@ -366,8 +347,18 @@ ozz::math::Transform FbxSystemConverter::EvaluateDefaultTransform(FbxNode* _node
     math::Store3PtrU(scale, &transform.scale.x);
     return transform;
   }
-
   return ozz::math::Transform::identity();
+}
+
+math::Transform FbxSystemConverter::ConvertTransform(
+  const math::Transform& _t) const {
+/*
+  const math::Transform transform = {ConvertPoint(_t.translation),
+                                     ConvertRotation(_t.rotation),
+                                     ConvertScale(_t.scale)};
+  return transform;
+*/
+  return _t;
 }
 
 bool FbxAMatrixToTransform(const FbxAMatrix& _matrix,

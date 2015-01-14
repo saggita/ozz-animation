@@ -102,10 +102,6 @@ class FbxSystemConverter {
   FbxSystemConverter(const FbxAxisSystem& _from_axis,
                      const FbxSystemUnit& _from_unit);
 
-  math::Float4x4 EvaluateDefaultMatrix(FbxNode* _node, bool _root) const;
-
-  ozz::math::Transform EvaluateDefaultTransform(FbxNode* _node, bool _root) const;
-
   math::Float4x4 ConvertMatrix(const FbxAMatrix& _m) const;
   math::Float4x4 ConvertMatrix(const math::Float4x4& _m) const;
 
@@ -114,6 +110,8 @@ class FbxSystemConverter {
   math::Quaternion ConvertRotation(const math::Quaternion& _q) const;
 
   math::Float3 ConvertScale(const math::Float3& _s) const;
+
+  math::Transform ConvertTransform(const FbxAMatrix& _m) const;
 
   math::Transform ConvertTransform(const math::Transform& _t) const;
 

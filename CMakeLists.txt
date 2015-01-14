@@ -57,7 +57,7 @@ include_directories(include)
 add_subdirectory(src)
 
 # Continues with the tests tree
-add_subdirectory(test)
+#add_subdirectory(test)
 
 # Continues with samples
 add_subdirectory(samples)

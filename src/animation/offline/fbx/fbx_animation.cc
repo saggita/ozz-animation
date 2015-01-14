@@ -48,6 +48,7 @@ namespace fbx {
 
 namespace {
 bool ExtractAnimation(FbxScene* _scene,
+                      FbxSystemConverter* _converter,
                       FbxAnimStack* anim_stack,
                       const Skeleton& _skeleton,
                       float _sampling_rate,
@@ -149,17 +150,11 @@ bool ExtractAnimation(FbxScene* _scene,
       }
 
       // Evaluate local transform at fbx_time.
-      FbxAMatrix matrix;
       bool root = _skeleton.joint_properties()[i].parent == Skeleton::kNoParentIndex;
-      if (root) {
-        matrix = evaluator->GetNodeGlobalTransform(node, FbxTimeSeconds(t));
-      } else {
-        matrix = evaluator->GetNodeLocalTransform(node, FbxTimeSeconds(t));
-      }
-      ozz::math::Transform transform;
-
-      // Converts to ozz transformation format.
-      FbxAMatrixToTransform(matrix, &transform);
+      const ozz::math::Transform transform =
+        _converter->ConvertTransform(
+          root?evaluator->GetNodeGlobalTransform(node, FbxTimeSeconds(t)):
+               evaluator->GetNodeLocalTransform(node, FbxTimeSeconds(t)));
 
       // Fills corresponding track.
       const float local_time = t - start;
@@ -183,6 +178,7 @@ bool ExtractAnimation(FbxScene* _scene,
 }
 
 bool ExtractAnimation(FbxScene* _scene,
+                      FbxSystemConverter* _converter,
                       const Skeleton& _skeleton,
                       float _sampling_rate,
                       RawAnimation* _animation) {
@@ -204,6 +200,7 @@ bool ExtractAnimation(FbxScene* _scene,
   ozz::log::Log() << "Extracting animation \"" << anim_stack->GetName() << "\""
     << std::endl;
   return ExtractAnimation(_scene,
+                          _converter,
                           anim_stack,
                           _skeleton,
                           _sampling_rate,

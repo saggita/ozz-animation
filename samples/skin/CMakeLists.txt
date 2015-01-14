@@ -53,14 +53,14 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E make_directory media
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_LIST_DIR}/README .
   COMMAND fbx2skel
-    --file="C:/Program Files/Autodesk/FBX/FBX SDK/2015.1/samples/ViewScene/humanoid.fbx"
+    --file="${ozz_media_directory}/collada/alain/skeleton.dae"
     --skeleton="${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
   COMMAND fbx2anim
-    --file="C:/Program Files/Autodesk/FBX/FBX SDK/2015.1/samples/ViewScene/humanoid.fbx"
+    --file="${ozz_media_directory}/collada/alain/walk.dae"
     --skeleton="${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
     --animation="${CMAKE_CURRENT_BINARY_DIR}/media/animation.ozz"
   COMMAND sample_skin_fbx2skin
-    --file="C:/Program Files/Autodesk/FBX/FBX SDK/2015.1/samples/ViewScene/humanoid.fbx"
+    --file="${ozz_media_directory}/fbx/alain/skeleton.fbx"
     --skeleton="${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
     --skin="${CMAKE_CURRENT_BINARY_DIR}/media/mesh.ozz")
 

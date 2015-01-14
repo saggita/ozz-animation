@@ -91,7 +91,11 @@ bool ImportFromFile(const char* _filename,
     return false;
   }
 
-  if (!ExtractAnimation(scene_loader.scene(), _skeleton, _sampling_rate, _animation)) {
+  if (!ExtractAnimation(scene_loader.scene(),
+                        scene_loader.converter(),
+                        _skeleton,
+                        _sampling_rate,
+                        _animation)) {
     log::Err() << "Fbx animation extraction failed." << std::endl;
     return false;
   }

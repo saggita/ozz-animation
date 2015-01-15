@@ -35,6 +35,9 @@
 
 #include "ozz/base/io/archive.h"
 
+#include "ozz/base/maths/math_archive.h"
+#include "ozz/base/maths/simd_math_archive.h"
+
 namespace ozz {
 namespace sample {
 SkinnedMesh::SkinnedMesh() {
@@ -84,6 +87,7 @@ void Save(OArchive& _archive,
     const sample::SkinnedMesh& mesh = _meshes[i];
     _archive << mesh.parts;
     _archive << mesh.triangle_indices;
+    _archive << mesh.inverse_bind_poses;
   }
 }
 
@@ -97,6 +101,7 @@ void Load(IArchive& _archive,
     sample::SkinnedMesh& mesh = _meshes[i];
     _archive >> mesh.parts;
     _archive >> mesh.triangle_indices;
+    _archive >> mesh.inverse_bind_poses;
   }
 }
 }  // io

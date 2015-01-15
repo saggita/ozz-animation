@@ -35,12 +35,15 @@
 #include "ozz/base/containers/vector.h"
 #include "ozz/base/io/archive_traits.h"
 
+#include "ozz/base/maths/vec_float.h"
+#include "ozz/base/maths/simd_math.h"
+
 namespace ozz {
 namespace sample {
 
 // Defines a mesh with skinning information (joint indices and weights).
 // The mesh is subdivided into parts that group vertices according to their
-// number of influencing joints. Triangle indices are shared across mesh parts. 
+// number of influencing joints. Triangle indices are shared across mesh parts.
 struct SkinnedMesh {
   SkinnedMesh();
   ~SkinnedMesh();
@@ -94,6 +97,9 @@ struct SkinnedMesh {
 
   // Triangles indices. Indexed vertex are shared across all parts.
   ozz::Vector<uint16_t>::Std triangle_indices;
+
+  // Inverse bind-pose matrices. These are only available for skinned meshes.
+  ozz::Vector<ozz::math::Float4x4>::Std inverse_bind_poses;
 };
 }  // sample
 

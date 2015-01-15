@@ -124,9 +124,12 @@ bool SortInfluenceWeights(const SkinMapping& _left, const SkinMapping& _right) {
 }  // namespace
 
 bool BuildSkin(FbxMesh* _mesh,
+               ozz::animation::offline::fbx::FbxSystemConverter* _converter,
                const ozz::animation::Skeleton& _skeleton,
-               ozz::sample::SkinnedMesh::Part* _skinned_mesh_part) {
-  assert(_skinned_mesh_part->vertex_count() != 0);
+               ozz::sample::SkinnedMesh* _skinned_mesh) {
+  assert(_skinned_mesh->parts.size() == 1 &&
+         _skinned_mesh->parts[0].vertex_count() != 0);
+  ozz::sample::SkinnedMesh::Part& part = _skinned_mesh->parts[0];
 
   const int skin_count = _mesh->GetDeformerCount(FbxDeformer::eSkin);
   if (skin_count == 0) {
@@ -157,9 +160,21 @@ bool BuildSkin(FbxMesh* _mesh,
   }
 
   // Resize to the number of vertices
-  const size_t vertex_count = _skinned_mesh_part->vertex_count();
+  const size_t vertex_count = part.vertex_count();
   VertexSkinMappings vertex_skin_mappings;
   vertex_skin_mappings.resize(vertex_count);
+
+  // Resize inverse bind pose matrices and set all to identity.
+  _skinned_mesh->inverse_bind_poses.resize(_skeleton.num_joints());
+  for (int i = 0; i < _skeleton.num_joints(); ++i) {
+    _skinned_mesh->inverse_bind_poses[i] = ozz::math::Float4x4::identity();
+  }
+
+  // Computes geometry matrix.
+  const FbxAMatrix geometry_matrix(
+    _mesh->GetNode()->GetGeometricTranslation(FbxNode::eSourcePivot),
+    _mesh->GetNode()->GetGeometricRotation(FbxNode::eSourcePivot),
+    _mesh->GetNode()->GetGeometricScaling(FbxNode::eSourcePivot));
 
   int cluster_count = deformer->GetClusterCount();
   for (int c = 0; c < cluster_count; ++c)
@@ -174,10 +189,25 @@ bool BuildSkin(FbxMesh* _mesh,
     JointsMap::const_iterator it = joints_map.find(node->GetName());
     if (it == joints_map.end()) {
       ozz::log::Err() << "Required joint " << node->GetName() <<
-        " not found in skeleton." << std::endl;
+        " not found in provided skeleton." << std::endl;
       return false;
     }
     const uint16_t joint = it->second;
+
+    // Computes joint's inverse bind-pose matrix.
+    FbxAMatrix transform_matrix;
+    cluster->GetTransformMatrix(transform_matrix);
+    transform_matrix *= geometry_matrix;
+
+    FbxAMatrix transform_link_matrix;
+    cluster->GetTransformLinkMatrix(transform_link_matrix);
+
+    const FbxAMatrix inverse_bind_pose =
+      transform_link_matrix.Inverse() * transform_matrix;
+
+    // Stores inverse transformation.
+    _skinned_mesh->inverse_bind_poses[joint] =
+      _converter->ConvertMatrix(inverse_bind_pose);
 
     // Affect joint to all vertices of the cluster.
     const int ctrl_point_index_count = cluster->GetControlPointIndicesCount();
@@ -208,15 +238,15 @@ bool BuildSkin(FbxMesh* _mesh,
   }
 
   // Allocates indices and weights.
-  _skinned_mesh_part->joint_indices.resize(vertex_count * max_influences);
-  _skinned_mesh_part->joint_weights.resize(vertex_count * max_influences);
+  part.joint_indices.resize(vertex_count * max_influences);
+  part.joint_weights.resize(vertex_count * max_influences);
 
   // Build output vertices data.
   bool vertex_isnt_influenced = false;
   for (size_t i = 0; i < vertex_count; ++i) {
     VertexSkinMappings::const_reference inv = vertex_skin_mappings[i];
-    uint16_t* indices = &_skinned_mesh_part->joint_indices[i * max_influences];
-    float* weights = &_skinned_mesh_part->joint_weights[i * max_influences];
+    uint16_t* indices = &part.joint_indices[i * max_influences];
+    float* weights = &part.joint_weights[i * max_influences];
 
     // Stores joint's indices and weights.
     size_t influence_count = inv.size();
@@ -386,6 +416,9 @@ bool SplitParts(const ozz::sample::SkinnedMesh& _skinned_mesh,
       vertices_remap[_skinned_mesh.triangle_indices[i]];
   }
 
+  // Copy bind pose matrices
+  _partitionned_mesh->inverse_bind_poses = _skinned_mesh.inverse_bind_poses;
+
   return true;
 }
 
@@ -479,7 +512,7 @@ int main(int _argc, const char** _argv) {
     return EXIT_FAILURE;
   }
 
-  if (!BuildSkin(mesh, skeleton, &skinned_mesh_part)) {
+  if (!BuildSkin(mesh, scene_loader.converter(), skeleton, &skinned_mesh)) {
     return EXIT_FAILURE;
   }
 

@@ -123,7 +123,7 @@ class SkinSampleApplication : public ozz::sample::Application {
 
     // Builds skinning matrices, based on the output of the animation stage.
     for (int i = 0; i < skeleton_.num_joints(); ++i) {
-      skinning_matrices_[i] = ozz::math::Float4x4::identity();//models_[i] * inverse_bind_pose_[i];
+      skinning_matrices_[i] = models_[i] * mesh_.inverse_bind_poses[i];
     }
 
     // Prepares rendering mesh, which allocates the buffers that are filled as

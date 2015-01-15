@@ -56,7 +56,7 @@ add_custom_command(
     --file="${ozz_media_directory}/collada/alain/skeleton.dae"
     --skeleton="${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
   COMMAND fbx2anim
-    --file="${ozz_media_directory}/fbx/alain/skeleton.fbx"
+    --file="${ozz_media_directory}/collada/alain/walk.dae"
     --skeleton="${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
     --animation="${CMAKE_CURRENT_BINARY_DIR}/media/animation.ozz"
   COMMAND sample_skin_fbx2skin

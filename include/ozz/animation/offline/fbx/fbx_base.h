@@ -107,13 +107,9 @@ class FbxSystemConverter {
 
   math::Float3 ConvertPoint(const FbxVector4& _p) const;
 
-  math::Quaternion ConvertRotation(const math::Quaternion& _q) const;
-
-  math::Float3 ConvertScale(const math::Float3& _s) const;
+  math::Float3 ConvertVector(const FbxVector4& _p) const;
 
   math::Transform ConvertTransform(const FbxAMatrix& _m) const;
-
-  math::Transform ConvertTransform(const math::Transform& _t) const;
 
  private:
 
@@ -165,15 +161,6 @@ private:
   // Axis and unit conversion helper.
   FbxSystemConverter* converter_;
 };
-
-// Evaluates default local transformation from a FbxNode
-bool EvaluateDefaultLocalTransform(FbxNode* _node,
-                                   bool _root,
-                                   ozz::math::Transform* _transform);
-
-// Convert a FbxAMatrix to ozz Transform object.
-bool FbxAMatrixToTransform(const FbxAMatrix& _matrix,
-                           ozz::math::Transform* _transform);
 }  // fbx
 }  // offline
 }  // animation

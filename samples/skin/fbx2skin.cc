@@ -82,15 +82,12 @@ bool BuildVertices(FbxMesh* _mesh,
       normal_element->GetReferenceMode() != FbxLayerElement::eDirect;
     for (int v = 0; v < vertex_count; ++v) {
       const int lv = indirect ? normal_element->GetIndexArray().GetAt(v) : v;
-      const FbxVector4 in = normal_element->GetDirectArray().GetAt(lv);
-      const ozz::math::SimdFloat4 simd_in = ozz::math::simd_float4::Load(
-        static_cast<float>(in[0]) * ccw_multiplier,
-        static_cast<float>(in[1]) * ccw_multiplier,
-        static_cast<float>(in[2]) * ccw_multiplier,
-        0.f);
-      const ozz::math::SimdFloat4 transformed =
-        ozz::math::Normalize3(/*vector_transform * */simd_in);
-      ozz::math::Store3PtrU(transformed, &_skinned_mesh_part->normals[v * 3]);
+      const FbxVector4 in =
+        normal_element->GetDirectArray().GetAt(lv) * ccw_multiplier;
+      const ozz::math::Float3 normal = _converter->ConvertVector(in);
+      _skinned_mesh_part->normals[v * 3 + 0] = normal.x;
+      _skinned_mesh_part->normals[v * 3 + 1] = normal.y;
+      _skinned_mesh_part->normals[v * 3 + 2] = normal.z;
     }
   } else {
     // Set a default value.
@@ -503,7 +500,10 @@ int main(int _argc, const char** _argv) {
     }
   }
 
+  scene_loader.scene()->ConvertMeshNormals();
+
   FbxMesh* mesh = scene_loader.scene()->GetSrcObject<FbxMesh>(0);
+  mesh->RemoveBadPolygons();
 
   ozz::sample::SkinnedMesh skinned_mesh;
   skinned_mesh.parts.resize(1);

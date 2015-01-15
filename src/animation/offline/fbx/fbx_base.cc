@@ -302,35 +302,16 @@ math::Float3 FbxSystemConverter::ConvertPoint(const FbxVector4& _p) const {
   return ret;
 }
 
-math::Quaternion FbxSystemConverter::ConvertRotation(
-  const math::Quaternion& _q) const {
-/*
-  switch (up_axis_) {
-    case kXUp: return math::Quaternion(-_q.y, _q.x, _q.z, _q.w);
-    case kYUp: return _q;
-    case kZUp: return math::Quaternion(_q.x, _q.z, -_q.y, _q.w);
-    default: {
-      assert(false);
-      return _q;
-    }
-  }
-*/
-  return _q;
-}
-
-math::Float3 FbxSystemConverter::ConvertScale(const math::Float3& _s) const {
-/*
-  switch (up_axis_) {
-    case kXUp: return math::Float3(_s.y, _s.x, _s.z);
-    case kYUp: return _s;
-    case kZUp: return math::Float3(_s.x, _s.z, _s.y);
-    default: {
-      assert(false);
-      return _s;
-    }
-  }
-*/
-  return _s;
+math::Float3 FbxSystemConverter::ConvertVector(const FbxVector4& _p) const {
+  const math::SimdFloat4 p_in =
+    math::simd_float4::Load(static_cast<float>(_p[0]),
+                            static_cast<float>(_p[1]),
+                            static_cast<float>(_p[2]),
+                            0.f);
+  const math::SimdFloat4 p_out = convert_ * p_in;
+  math::Float3 ret;
+  math::Store3PtrU(p_out, &ret.x);
+  return ret;
 }
 
 math::Transform FbxSystemConverter::ConvertTransform(const FbxAMatrix& _m) const {
@@ -345,42 +326,6 @@ math::Transform FbxSystemConverter::ConvertTransform(const FbxAMatrix& _m) const
     return transform;
   }
   return ozz::math::Transform::identity();
-}
-
-math::Transform FbxSystemConverter::ConvertTransform(
-  const math::Transform& _t) const {
-/*
-  const math::Transform transform = {ConvertPoint(_t.translation),
-                                     ConvertRotation(_t.rotation),
-                                     ConvertScale(_t.scale)};
-  return transform;
-*/
-  return _t;
-}
-
-bool FbxAMatrixToTransform(const FbxAMatrix& _matrix,
-                           ozz::math::Transform* _transform) {
-
-  const FbxVector4 translation = _matrix.GetT();
-  _transform->translation = ozz::math::Float3(
-    static_cast<float>(translation.mData[0]),
-    static_cast<float>(translation.mData[1]),
-    static_cast<float>(translation.mData[2]));
-
-  const FbxQuaternion quaternion = _matrix.GetQ();
-  _transform->rotation = ozz::math::Quaternion(
-    static_cast<float>(quaternion.Buffer()[0]),
-    static_cast<float>(quaternion.Buffer()[1]),
-    static_cast<float>(quaternion.Buffer()[2]),
-    static_cast<float>(quaternion.Buffer()[3]));
-
-  const FbxVector4 scale = _matrix.GetS();
-  _transform->scale = ozz::math::Float3(
-    static_cast<float>(scale.mData[0]),
-    static_cast<float>(scale.mData[1]),
-    static_cast<float>(scale.mData[2]));
-
-  return true;
 }
 }  // fbx
 }  // ozz

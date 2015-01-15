@@ -55,13 +55,25 @@ bool ExtractAnimation(FbxScene* _scene,
                       RawAnimation* _animation) {
   // Setup Fbx animation evaluator.
   _scene->SetCurrentAnimationStack(anim_stack);
-  FbxAnimEvaluator* evaluator = _scene->GetAnimationEvaluator();
 
-  // Initialize animation duration.
-  const float start = static_cast<float>(
-    anim_stack->GetLocalTimeSpan().GetStart().GetSecondDouble());
-  const float end = static_cast<float>(
-    anim_stack->GetLocalTimeSpan().GetStop().GetSecondDouble());
+  // Extract animation duration.
+  float start, end;
+  const FbxTakeInfo* take_info = _scene->GetTakeInfo(anim_stack->GetName());
+  if (take_info)
+  {
+    start = static_cast<float>(
+      take_info->mLocalTimeSpan.GetStart().GetSecondDouble());
+    end = static_cast<float>(
+      take_info->mLocalTimeSpan.GetStop().GetSecondDouble());
+  }
+  else
+  {
+    // Take the time line value.
+    FbxTimeSpan lTimeLineTimeSpan;
+    _scene->GetGlobalSettings().GetTimelineDefaultTimeSpan(lTimeLineTimeSpan);
+    start = static_cast<float>(lTimeLineTimeSpan.GetStart().GetSecondDouble());
+    end = static_cast<float>(lTimeLineTimeSpan.GetStop().GetSecondDouble());
+  }
 
   // Animation duration could be 0 if it's just a pose. In this case we'll set a
   // default 1s duration.
@@ -76,19 +88,13 @@ bool ExtractAnimation(FbxScene* _scene,
   _animation->tracks.resize(_skeleton.num_joints());
 
   // Iterate all skeleton joints and fills there track with key frames.
+  FbxAnimEvaluator* evaluator = _scene->GetAnimationEvaluator();
   for (int i = 0; i < _skeleton.num_joints(); i++) {
     RawAnimation::JointTrack& track = _animation->tracks[i];
 
     // Find a node that matches skeleton joint.
-    FbxNode* node = NULL;
     const char* joint_name = _skeleton.joint_names()[i];
-    for (int j = 0; j < _scene->GetNodeCount(); j++) {
-      FbxNode* node_j = _scene->GetNode(j);
-      if (strcmp(node_j->GetName(), joint_name) == 0) {
-        node = node_j;
-        break;
-      }
-    }
+    FbxNode* node = _scene->FindNodeByName(joint_name);
 
     if (!node) {
       // Empty joint track.
@@ -135,7 +141,7 @@ bool ExtractAnimation(FbxScene* _scene,
     // purpose).
     const float sampling_period = 1.f / _sampling_rate;
     const int max_keys =
-      static_cast<int>(1.f + (end - start) / sampling_period);
+      static_cast<int>(3.f + (end - start) / sampling_period);
     track.translations.reserve(max_keys);
     track.rotations.reserve(max_keys);
     track.scales.reserve(max_keys);

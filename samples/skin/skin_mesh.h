@@ -73,6 +73,11 @@ struct SkinnedMesh {
     return max_influences_count;
   }
 
+  // Returns the number of joints used to skin the mesh.
+  int num_joints() {
+    return static_cast<int>(inverse_bind_poses.size());
+  }
+
   // Defines a portion of the mesh. A mesh is subdivided in sets of vertices
   // with the same number of joint influences.
   struct Part {

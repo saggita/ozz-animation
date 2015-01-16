@@ -272,38 +272,13 @@ class SkinSampleApplication : public ozz::sample::Application {
       return false;
     }
 
+    // The number of joints of the mesh needs to match skeleton.
+    if (mesh_.num_joints() != num_joints) {
+      return false;
+    }
+
     // Init default value for influences count limitation option.
     limit_influences_count_ = mesh_.max_influences_count();
-
-    if (!BuildInverseBindPose()) {
-      return false;
-    }
-
-    return true;
-  }
-
-  bool BuildInverseBindPose() {
-    const int num_joints = skeleton_.num_joints();
-
-    // Build inverse bind-pose matrices, based on the input skeleton.
-    inverse_bind_pose_ = ozz::memory::default_allocator()->
-      AllocateRange<ozz::math::Float4x4>(num_joints);
-
-    // Convert skeleton bind-pose in local space to model-space matrices using
-    // the LocalToModelJob. Output is stored directly inside inverse_bind_pose_
-    // which will then be inverted in-place.
-    ozz::animation::LocalToModelJob ltm_job;
-    ltm_job.skeleton = &skeleton_;
-    ltm_job.input = skeleton_.bind_pose();
-    ltm_job.output = inverse_bind_pose_;
-    if (!ltm_job.Run()) {
-      return false;
-    }
-
-    // Invert matrices in-place.
-    for (int i = 0; i < num_joints; ++i) {
-      inverse_bind_pose_[i] = Invert(inverse_bind_pose_[i]);
-    }
 
     return true;
   }
@@ -313,7 +288,6 @@ class SkinSampleApplication : public ozz::sample::Application {
     allocator->Deallocate(locals_);
     allocator->Deallocate(models_);
     allocator->Deallocate(skinning_matrices_);
-    allocator->Deallocate(inverse_bind_pose_);
     allocator->Delete(cache_);
   }
 
@@ -400,10 +374,6 @@ class SkinSampleApplication : public ozz::sample::Application {
 
   // Buffer of skinning matrices.
   ozz::Range<ozz::math::Float4x4> skinning_matrices_;
-
-  // Buffer of inverse bind-pose matrices. They are used during skinning to
-  // convert vertices to joints local-space.
-  ozz::Range<ozz::math::Float4x4> inverse_bind_pose_;
 
   // The input mesh containing skinning information (joint indices, weights...).
   // This mesh is loaded from a file.

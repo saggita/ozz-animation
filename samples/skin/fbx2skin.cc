@@ -84,7 +84,7 @@ bool BuildVertices(FbxMesh* _mesh,
       const int lv = indirect ? normal_element->GetIndexArray().GetAt(v) : v;
       const FbxVector4 in =
         normal_element->GetDirectArray().GetAt(lv) * ccw_multiplier;
-      const ozz::math::Float3 normal = _converter->ConvertVector(in);
+      const ozz::math::Float3 normal = _converter->ConvertNormal(in);
       _skinned_mesh_part->normals[v * 3 + 0] = normal.x;
       _skinned_mesh_part->normals[v * 3 + 1] = normal.y;
       _skinned_mesh_part->normals[v * 3 + 2] = normal.z;

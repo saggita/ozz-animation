@@ -259,9 +259,11 @@ FbxSystemConverter::FbxSystemConverter(const FbxAxisSystem& _from_axis,
   const float to_meters =
     static_cast<float>(_from_unit.GetScaleFactor()) * .01f;
 
-  // Builds conversion matrix.
+  // Builds conversion matrices.
   convert_ = Invert(from_matrix) *
              math::Float4x4::Scaling(math::simd_float4::Load1(to_meters));
+  inverse_convert_ = Invert(convert_);
+  inverse_transpose_convert_ = Transpose(inverse_convert_);
 }
 
 math::Float4x4 FbxSystemConverter::ConvertMatrix(const FbxAMatrix& _m) const {
@@ -287,7 +289,7 @@ math::Float4x4 FbxSystemConverter::ConvertMatrix(const FbxAMatrix& _m) const {
 }
 
 math::Float4x4 FbxSystemConverter::ConvertMatrix(const math::Float4x4& _m) const {
-  return convert_ * _m * Invert(convert_);
+  return convert_ * _m * inverse_convert_;
 }
 
 math::Float3 FbxSystemConverter::ConvertPoint(const FbxVector4& _p) const {
@@ -309,6 +311,18 @@ math::Float3 FbxSystemConverter::ConvertVector(const FbxVector4& _p) const {
                             static_cast<float>(_p[2]),
                             0.f);
   const math::SimdFloat4 p_out = convert_ * p_in;
+  math::Float3 ret;
+  math::Store3PtrU(p_out, &ret.x);
+  return ret;
+}
+
+math::Float3 FbxSystemConverter::ConvertNormal(const FbxVector4& _p) const {
+  const math::SimdFloat4 p_in =
+    math::simd_float4::Load(static_cast<float>(_p[0]),
+                            static_cast<float>(_p[1]),
+                            static_cast<float>(_p[2]),
+                            0.f);
+  const math::SimdFloat4 p_out = inverse_transpose_convert_ * p_in;
   math::Float3 ret;
   math::Store3PtrU(p_out, &ret.x);
   return ret;

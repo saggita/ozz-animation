@@ -109,6 +109,8 @@ class FbxSystemConverter {
 
   math::Float3 ConvertVector(const FbxVector4& _p) const;
 
+  math::Float3 ConvertNormal(const FbxVector4& _p) const;
+
   math::Transform ConvertTransform(const FbxAMatrix& _m) const;
 
  private:
@@ -119,6 +121,12 @@ class FbxSystemConverter {
   // The matrix used to convert from "from" axis to "to" coordinate system
   // base.
   math::Float4x4 convert_;
+
+  // The inverse of convert_ matrix.
+  math::Float4x4 inverse_convert_;
+
+  // The transpose inverse of convert_ matrix.
+  math::Float4x4 inverse_transpose_convert_;
 };
 
 // Loads a scene from a Fbx file.

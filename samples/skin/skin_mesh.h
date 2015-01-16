@@ -77,7 +77,7 @@ struct SkinnedMesh {
   // with the same number of joint influences.
   struct Part {
     int vertex_count() const {
-      return static_cast<int>(positions.size()) / 3;
+      return static_cast<int>(positions.size());
     }
 
     int influences_count() const {
@@ -88,8 +88,8 @@ struct SkinnedMesh {
       return static_cast<int>(joint_indices.size()) / _vertex_count;
     }
 
-    ozz::Vector<float>::Std positions;
-    ozz::Vector<float>::Std normals;
+    ozz::Vector<ozz::math::Float3>::Std positions;
+    ozz::Vector<ozz::math::Float3>::Std normals;
     ozz::Vector<uint16_t>::Std joint_indices;
     ozz::Vector<float>::Std joint_weights;
   };

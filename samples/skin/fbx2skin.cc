@@ -60,16 +60,14 @@ bool BuildVertices(FbxMesh* _mesh,
                    ozz::sample::SkinnedMesh::Part* _skinned_mesh_part) {
 
   const int vertex_count = _mesh->GetControlPointsCount();
-  _skinned_mesh_part->positions.resize(vertex_count * 3);
-  _skinned_mesh_part->normals.resize(vertex_count * 3);
+  _skinned_mesh_part->positions.resize(vertex_count);
+  _skinned_mesh_part->normals.resize(vertex_count);
 
   // Iterate through all vertices and stores position.
   const FbxVector4* control_points = _mesh->GetControlPoints();
   for (int v = 0; v < vertex_count; ++v) {
-    const ozz::math::Float3 pos = _converter->ConvertPoint(control_points[v]);
-    _skinned_mesh_part->positions[v * 3 + 0] = pos.x;
-    _skinned_mesh_part->positions[v * 3 + 1] = pos.y;
-    _skinned_mesh_part->positions[v * 3 + 2] = pos.z;
+    _skinned_mesh_part->positions[v] =
+      _converter->ConvertPoint(control_points[v]);
   }
 
   // Normals could be flipped.
@@ -84,18 +82,12 @@ bool BuildVertices(FbxMesh* _mesh,
       const int lv = indirect ? normal_element->GetIndexArray().GetAt(v) : v;
       const FbxVector4 in =
         normal_element->GetDirectArray().GetAt(lv) * ccw_multiplier;
-      const ozz::math::Float3 normal = _converter->ConvertNormal(in);
-      _skinned_mesh_part->normals[v * 3 + 0] = normal.x;
-      _skinned_mesh_part->normals[v * 3 + 1] = normal.y;
-      _skinned_mesh_part->normals[v * 3 + 2] = normal.z;
+      _skinned_mesh_part->normals[v] = _converter->ConvertNormal(in);
     }
   } else {
     // Set a default value.
     for (int v = 0; v < vertex_count; ++v) {
-      float* out = &_skinned_mesh_part->normals[v * 3];
-      out[0] = 0.f;
-      out[1] = 1.f;
-      out[2] = 0.f;
+      _skinned_mesh_part->normals[v] = ozz::math::Float3::y_axis();
     }
   }
 
@@ -350,8 +342,8 @@ bool SplitParts(const ozz::sample::SkinnedMesh& _skinned_mesh,
 
     // Resize output part.
     const int influences = i + 1;
-    out_part.positions.resize(bucket_vertex_count * 3);
-    out_part.normals.resize(bucket_vertex_count * 3);
+    out_part.positions.resize(bucket_vertex_count);
+    out_part.normals.resize(bucket_vertex_count);
     out_part.joint_indices.resize(bucket_vertex_count * influences);
     out_part.joint_weights.resize(bucket_vertex_count * influences);
 
@@ -359,17 +351,9 @@ bool SplitParts(const ozz::sample::SkinnedMesh& _skinned_mesh,
     for (size_t j = 0; j < bucket_vertex_count; ++j) {
       // Fills positions.
       const size_t bucket_vertex_index = bucket[j];
-      const float* in_pos = &in_part.positions[bucket_vertex_index * 3];
-      float* out_pos = &out_part.positions[j * 3];
-      out_pos[0] = in_pos[0];
-      out_pos[1] = in_pos[1];
-      out_pos[2] = in_pos[2];
+      out_part.positions[j] = in_part.positions[bucket_vertex_index];
       // Fills normals.
-      const float* in_normal = &in_part.normals[bucket_vertex_index * 3];
-      float* out_normal = &out_part.normals[j * 3];
-      out_normal[0] = in_normal[0];
-      out_normal[1] = in_normal[1];
-      out_normal[2] = in_normal[2];
+      out_part.normals[j] = in_part.normals[bucket_vertex_index];
       // Fills joints indices.
       const uint16_t* in_indices =
         &in_part.joint_indices[bucket_vertex_index * max_influences];

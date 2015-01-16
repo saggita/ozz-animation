@@ -170,9 +170,9 @@ class SkinSampleApplication : public ozz::sample::Application {
       }
 
       // Setup input positions, coming from the loaded mesh.
-      skinning_job.in_positions.begin = array_begin(part.positions);
-      skinning_job.in_positions.end = array_end(part.positions);
-      skinning_job.in_positions_stride = sizeof(float) * 3;
+      skinning_job.in_positions.begin = &array_begin(part.positions)->x;
+      skinning_job.in_positions.end = &array_end(part.positions)->x;
+      skinning_job.in_positions_stride = sizeof(ozz::math::Float3);
 
       // Setup output positions, coming from the rendering output mesh buffers.
       // We need to offset the buffer every loop.
@@ -186,9 +186,9 @@ class SkinSampleApplication : public ozz::sample::Application {
       skinning_job.out_positions_stride = pbuffer.stride;
 
       // Setup input normals, coming from the loaded mesh.
-      skinning_job.in_normals.begin = array_begin(part.normals);
-      skinning_job.in_normals.end = array_end(part.normals);
-      skinning_job.in_normals_stride = sizeof(float) * 3;
+      skinning_job.in_normals.begin = &array_begin(part.normals)->x;
+      skinning_job.in_normals.end = &array_end(part.normals)->x;
+      skinning_job.in_normals_stride = sizeof(ozz::math::Float3);
 
       // Setup output normals, coming from the rendering output mesh buffers.
       // We need to offset the buffer every loop.

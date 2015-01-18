@@ -95,8 +95,7 @@ FbxSceneLoader::FbxSceneLoader(const char* _filename,
                                const FbxManagerInstance& _manager,
                                const FbxDefaultIOSettings& _io_settings)
     : scene_(NULL),
-    original_axis_system_(),
-    original_system_unit_() {
+      converter_(NULL) {
   // Create an importer.
   FbxImporter* importer = FbxImporter::Create(_manager,"ozz importer");
 

@@ -147,24 +147,10 @@ class FbxSceneLoader {
     return converter_;
   }
 
-  FbxAxisSystem ozz_axis_system() const;
-  FbxSystemUnit ozz_system_unit() const;
-
-  FbxAxisSystem original_axis_system() const {
-    return original_axis_system_;
-  }
-  FbxSystemUnit original_system_unit() const {
-    return original_system_unit_;
-  }
-
 private:
 
   // Scene instance that was loaded from the file.
   FbxScene* scene_;
-
-  // Original axis and unit systems.
-  FbxAxisSystem original_axis_system_;
-  FbxSystemUnit original_system_unit_;
 
   // Axis and unit conversion helper.
   FbxSystemConverter* converter_;

@@ -11,6 +11,7 @@ set(CPACK_PACKAGE_VERSION_PATCH 1)
 # Add project build options
 set(ozz_build_fbx ON CACHE BOOL "Buils Fbx pipeline (Requires Fbx SDK)")
 set(ozz_build_samples ON CACHE BOOL "Build samples")
+set(ozz_build_howtos ON CACHE BOOL "Build howtos")
 set(ozz_build_tests ON CACHE BOOL "Build unit tests")
 set(ozz_build_sse2 ON CACHE BOOL "Enable SSE2 instructions set")
 set(ozz_build_redebug_all OFF CACHE BOOL "Enable all REDEBUGing features")
@@ -61,3 +62,6 @@ add_subdirectory(src)
 
 # Continues with samples
 add_subdirectory(samples)
+
+# Continues with howtos
+add_subdirectory(howtos)

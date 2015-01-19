@@ -83,8 +83,9 @@ bool ExtractAnimation(FbxScene* _scene,
     _animation->duration = 1.f;
   }
 
-  // Allocates all tracks with the same number of tracks as the skeleton.
-  // Tracks that would not be found will remain empty (identity transformation).
+  // Allocates all tracks with the same number of joints as the skeleton.
+  // Tracks that would not be found will be set to skeleton bind-pose
+  // transformation.
   _animation->tracks.resize(_skeleton.num_joints());
 
   // Iterate all skeleton joints and fills there track with key frames.

@@ -97,28 +97,40 @@ public:
   FbxSkeletonIOSettings(const FbxManagerInstance& _manager);
 };
 
+// Implements axis system and unit system conversion helper, from any Fbx system
+// to ozz system (FbxAxisSystem::eYAxis, FbxAxisSystem::eParityOdd,
+// FbxAxisSystem::eRightHanded, meter).
+// While Fbx sdk FbxAxisSystem::ConvertScene and FbxSystem::ConvertScene only
+// affect scene root, this class functions can be used to bake nodes, vertices,
+// animations tranformations...
 class FbxSystemConverter {
  public:
+
+  // Initialize converter with fbx scene systems.
   FbxSystemConverter(const FbxAxisSystem& _from_axis,
                      const FbxSystemUnit& _from_unit);
 
+  // Converts a fbx matrix to an ozz Float4x4 matrix, in ozz axis and unit
+  // systems, using _m' = C * _m * (C-1) operation.
   math::Float4x4 ConvertMatrix(const FbxAMatrix& _m) const;
-  math::Float4x4 ConvertMatrix(const math::Float4x4& _m) const;
 
+  // Convert fbx matrix to an ozz transform, in ozz axis and unit systems,
+  // using _m' = C * _m * (C-1) operation.
+  math::Transform ConvertTransform(const FbxAMatrix& _m) const;
+
+  // Convert fbx FbxVector4 point to an ozz Float3, in ozz axis and unit
+  // systems, using _p' = C * _p operation.
   math::Float3 ConvertPoint(const FbxVector4& _p) const;
 
-  math::Float3 ConvertVector(const FbxVector4& _p) const;
-
+  // Convert fbx FbxVector4 normal to an ozz Float3, in ozz axis and unit
+  // systems, using _p' = ((C-1)-T) * _p operation. Normals are converted
+  // using the inverse transpose matrix to support non-uniform scale
+  // transformations.
   math::Float3 ConvertNormal(const FbxVector4& _p) const;
-
-  math::Transform ConvertTransform(const FbxAMatrix& _m) const;
 
  private:
 
-  // The vector used to convert "from" unit to "to" metric system.
-  float convert_unit_;
-
-  // The matrix used to convert from "from" axis to "to" coordinate system
+  // The matrix used to convert from "from" axis/unit to ozz coordinate system
   // base.
   math::Float4x4 convert_;
 

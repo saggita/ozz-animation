@@ -148,16 +148,16 @@ bool BuildSkin(FbxMesh* _mesh,
     joints_map[_skeleton.joint_names()[i]] = static_cast<uint16_t>(i);
   }
 
-  // Resize to the number of vertices
-  const size_t vertex_count = part.vertex_count();
-  VertexSkinMappings vertex_skin_mappings;
-  vertex_skin_mappings.resize(vertex_count);
-
   // Resize inverse bind pose matrices and set all to identity.
   _skinned_mesh->inverse_bind_poses.resize(_skeleton.num_joints());
   for (int i = 0; i < _skeleton.num_joints(); ++i) {
     _skinned_mesh->inverse_bind_poses[i] = ozz::math::Float4x4::identity();
   }
+
+  // Resize to the number of vertices
+  const size_t vertex_count = part.vertex_count();
+  VertexSkinMappings vertex_skin_mappings;
+  vertex_skin_mappings.resize(vertex_count);
 
   // Computes geometry matrix.
   const FbxAMatrix geometry_matrix(
@@ -165,13 +165,23 @@ bool BuildSkin(FbxMesh* _mesh,
     _mesh->GetNode()->GetGeometricRotation(FbxNode::eSourcePivot),
     _mesh->GetNode()->GetGeometricScaling(FbxNode::eSourcePivot));
 
-  int cluster_count = deformer->GetClusterCount();
+  const int cluster_count = deformer->GetClusterCount();
   for (int c = 0; c < cluster_count; ++c)
   {
     const FbxCluster* cluster = deformer->GetCluster(c);
     const FbxNode* node = cluster->GetLink();
     if (!node) {
+      ozz::log::Log() << "No node linked to cluster " << cluster->GetName() <<
+        "." << std::endl;
       continue;
+    }
+
+    const FbxCluster::ELinkMode mode = cluster->GetLinkMode();
+    if (mode != FbxCluster::eNormalize &&
+        mode != FbxCluster::eTotalOne) {
+      ozz::log::Err() << "Unsuported link mode for joint " << node->GetName() <<
+        "." << std::endl;
+      return false;
     }
 
     // Get corresponding joint index;
@@ -211,7 +221,7 @@ bool BuildSkin(FbxMesh* _mesh,
       // skinning because a smooth operator was active when skinning but has
       // been deactivated during export.
       const size_t vertex_index = ctrl_point_indices[v];
-      if (vertex_index < vertex_count && mapping.weight != 0.f) {
+      if (vertex_index < vertex_count && mapping.weight > 0.f) {
         vertex_skin_mappings[vertex_index].push_back(mapping);
       }
     }
@@ -222,7 +232,21 @@ bool BuildSkin(FbxMesh* _mesh,
   size_t max_influences = 0;
   for (size_t i = 0; i < vertex_count; ++i) {
     VertexSkinMappings::reference inv = vertex_skin_mappings[i];
+
+    // Updates max_influences.
     max_influences = ozz::math::Max(max_influences, inv.size());
+
+    // Normalize weights.
+    float sum = 0.f;
+    for (size_t j = 0; j < inv.size(); ++j) {
+      sum += inv[j].weight;
+    }
+    const float inv_sum = 1.f / (sum != 0.f ? sum : 1.f);
+    for (size_t j = 0; j < inv.size(); ++j) {
+      inv[j].weight *= inv_sum;
+    }
+
+    // Sort weights, bigger ones first, so that lowest one can be filtered out.
     std::sort(inv.begin(), inv.end(), &SortInfluenceWeights);
   }
 
@@ -310,7 +334,7 @@ bool SplitParts(const ozz::sample::SkinnedMesh& _skinned_mesh,
 
   // Group vertices if there's not enough of them for a given part. This allows to
   // limit SkinningJob fix cost overhead.
-  const size_t kMinBucketSize = 10;
+  const size_t kMinBucketSize = 16;
 
   for (size_t i = 0; i < bucked_vertices.size() - 1; ++i) {
     BuckedVertices::reference bucket = bucked_vertices[i];
@@ -408,12 +432,17 @@ bool StripWeights(ozz::sample::SkinnedMesh* _mesh) {
     ozz::sample::SkinnedMesh::Part& part = _mesh->parts[i];
     const int influence_count = part.influences_count();
     const int vertex_count = part.vertex_count();
-    if (influence_count == 1) {
+    if (influence_count <= 1) {
       part.joint_weights.clear();
     } else {
-      for (int j = vertex_count - 1; j >= 0; --j) {
-        part.joint_weights.erase(
-          part.joint_weights.begin() + (j + 1) * influence_count - 1);
+      const ozz::Vector<float>::Std copy = part.joint_weights;
+      part.joint_weights.clear();
+      part.joint_weights.reserve(vertex_count * (influence_count - 1));
+
+      for (int j = 0; j < vertex_count; ++j) {
+        for (int k = 0; k < influence_count - 1; ++k) {
+          part.joint_weights.push_back(copy[j * influence_count + k]);
+        }
       }
     }
     assert(static_cast<int>(part.joint_weights.size()) ==
@@ -476,7 +505,8 @@ int main(int _argc, const char** _argv) {
       std::endl;
   }
 
-  { // Triangulate the scene.
+  { // Triangulates the scene.
+    ozz::log::LogV() << "Triangulating scene." << std::endl;
     FbxGeometryConverter converter(fbx_manager);
     if (!converter.Triangulate(scene_loader.scene(), true)) {
       ozz::log::Err() << "Failed to triangulating meshes." << std::endl;
@@ -492,24 +522,35 @@ int main(int _argc, const char** _argv) {
   ozz::sample::SkinnedMesh skinned_mesh;
   skinned_mesh.parts.resize(1);
   ozz::sample::SkinnedMesh::Part& skinned_mesh_part = skinned_mesh.parts[0];
+
+  ozz::log::LogV() << "Reading vertices." << std::endl;
   if (!BuildVertices(mesh, scene_loader.converter(), &skinned_mesh_part)) {
+    ozz::log::Err() << "Failed to read vertices." << std::endl;
     return EXIT_FAILURE;
   }
-
+  
+  ozz::log::LogV() << "Reading skinning data." << std::endl;
   if (!BuildSkin(mesh, scene_loader.converter(), skeleton, &skinned_mesh)) {
+    ozz::log::Err() << "Failed to read skinning data." << std::endl;
     return EXIT_FAILURE;
   }
-
+  
+  ozz::log::LogV() << "Reading triangle indices." << std::endl;
   if (!BuildTriangleIndices(mesh, &skinned_mesh)) {
+    ozz::log::Err() << "Failed to read triangle indices." << std::endl;
     return EXIT_FAILURE;
   }
 
+  ozz::log::LogV() << "Partionning meshes." << std::endl;
   ozz::sample::SkinnedMesh partitioned_meshes;
   if (!SplitParts(skinned_mesh, &partitioned_meshes)) {
+    ozz::log::Err() << "Failed to partionned meshes." << std::endl;
     return EXIT_FAILURE;
   }
 
+  ozz::log::LogV() << "Stripping skinning weights." << std::endl;
   if (!StripWeights(&partitioned_meshes)) {
+    ozz::log::Err() << "Failed to strip weights." << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -525,6 +566,9 @@ int main(int _argc, const char** _argv) {
     ozz::io::OArchive archive(&skin_file);
     archive << partitioned_meshes;
   }
+
+  ozz::log::Log() << "Mesh binary archive successfully outputted for file " <<
+    OPTIONS_file.value() << "." << std::endl;
 
   return EXIT_SUCCESS;
 }

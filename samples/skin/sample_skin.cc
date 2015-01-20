@@ -340,8 +340,7 @@ class SkinSampleApplication : public ozz::sample::Application {
   }
 
   virtual void GetSceneBounds(ozz::math::Box* _bound) const {
-    //ozz::sample::ComputePostureBounds(models_, _bound);
-    ozz::sample::ComputeSkeletonBounds(skeleton_, _bound);
+    ozz::sample::ComputePostureBounds(models_, _bound);
   }
 
  private:

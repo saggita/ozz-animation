@@ -91,8 +91,7 @@ bool ImportFromFile(const char* _filename,
     return false;
   }
 
-  if (!ExtractAnimation(scene_loader.scene(),
-                        scene_loader.converter(),
+  if (!ExtractAnimation(&scene_loader,
                         _skeleton,
                         _sampling_rate,
                         _animation)) {

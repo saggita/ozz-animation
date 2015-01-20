@@ -48,8 +48,7 @@ struct RawAnimation;
 
 namespace fbx {
 
-bool ExtractAnimation(FbxScene* _scene,
-                      FbxSystemConverter* _converter,
+bool ExtractAnimation(FbxSceneLoader* _scene_loader,
                       const Skeleton& _skeleton,
                       float _sampling_rate,
                       RawAnimation* _animation);

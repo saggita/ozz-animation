@@ -151,10 +151,12 @@ class FbxSceneLoader {
                   const FbxDefaultIOSettings& _io_settings);
   ~FbxSceneLoader();
 
+  // Returns a valid scene if fbx import was successful, NULL otherwise.
   FbxScene* scene() const {
     return scene_;
   }
 
+  // Returns a valid converter if fbx import was successful, NULL otherwise.
   FbxSystemConverter* converter() {
     return converter_;
   }

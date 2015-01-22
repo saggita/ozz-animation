@@ -113,6 +113,7 @@ void Camera::Update(const math::Box& _box, float _delta_time, bool _first_frame)
   }
 
   // Mouse wheel activates Zoom.
+#ifndef EMSCRIPTEN
   const int w = glfwGetMouseWheel();
   const int dw = w - mouse_last_wheel_;
   mouse_last_wheel_ = w;
@@ -121,6 +122,7 @@ void Camera::Update(const math::Box& _box, float _delta_time, bool _first_frame)
     distance_ += -dw * kScrollFactor * distance_;
     remaining_animation_time_= 0.f;
   }
+#endif  // EMSCRIPTEN
 
   // Fetches current mouse position and compute its movement since last frame.
   int x, y;

@@ -56,7 +56,8 @@ bool RecurseNode(FbxNode* _node,
   if (node_attribute) {
     FbxNodeAttribute::EType node_type = node_attribute->GetAttributeType();
     switch (node_type) {
-      case FbxNodeAttribute::eSkeleton: {
+      case FbxNodeAttribute::eSkeleton:
+      case FbxNodeAttribute::eMarker: {
         skeleton_found = true;
         RawSkeleton::Joint::Children* children = NULL;
         if (_parent) {

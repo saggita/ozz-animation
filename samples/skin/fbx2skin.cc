@@ -55,44 +55,101 @@ OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies the skeleton that the skin is bound to.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skin, "Specifies ozz skin ouput file.", "", true)
 
-bool BuildVertices(FbxMesh* _mesh,
+bool BuildVertices(FbxMesh* _fbx_mesh,
                    ozz::animation::offline::fbx::FbxSystemConverter* _converter,
-                   ozz::sample::SkinnedMesh::Part* _skinned_mesh_part) {
+                   ozz::sample::SkinnedMesh* _skinned_mesh) {
+  ozz::sample::SkinnedMesh::Part& part = _skinned_mesh->parts[0];
 
-  const int vertex_count = _mesh->GetControlPointsCount();
-  _skinned_mesh_part->positions.resize(vertex_count);
-  _skinned_mesh_part->normals.resize(vertex_count);
-
-  // Iterate through all vertices and stores position.
-  const FbxVector4* control_points = _mesh->GetControlPoints();
-  for (int v = 0; v < vertex_count; ++v) {
-    _skinned_mesh_part->positions[v] =
-      _converter->ConvertPoint(control_points[v]);
+  // Checks normals availability.
+  bool has_normals = _fbx_mesh->GetElementNormalCount() > 0;
+  bool normal_by_ctrl_point = false;
+  if (has_normals) {
+    FbxLayerElement::EMappingMode mode =
+      _fbx_mesh->GetElementNormal(0)->GetMappingMode();
+    if (mode == FbxMesh::eNone) {
+      has_normals = false;
+    } else {
+      normal_by_ctrl_point = mode == FbxLayerElement::eByControlPoint;
+    }
   }
 
-  // Normals could be flipped.
-  float ccw_multiplier = _mesh->CheckIfVertexNormalsCCW() ? 1.f : -1.f;
+  // Regenerate normals if they're not available or not in thee right format.
+  if (!_fbx_mesh->GenerateNormals(!has_normals || !normal_by_ctrl_point, // overwrite
+                                  true,  // by ctrl point
+                                  false)) {  // clockwise
+    return false;
+  }
 
-  // If mesh has normals
-  if (_mesh->GetElementNormalCount() > 0) {
-    const FbxGeometryElementNormal* normal_element = _mesh->GetElementNormal(0);
+  // Now normals are by control point.
+  normal_by_ctrl_point = true;
+
+  // Allocates vertex data.
+  int vertex_count = _fbx_mesh->GetControlPointsCount();
+  if (!normal_by_ctrl_point) {
+    // Needs to allocate 3 vertices per polygon, aka triangle.
+    vertex_count = _fbx_mesh->GetPolygonCount() * 3;
+  }
+  part.positions.resize(vertex_count);
+  part.normals.resize(vertex_count);
+
+  const FbxVector4* control_points = _fbx_mesh->GetControlPoints();
+  float ccw_multiplier = _fbx_mesh->CheckIfVertexNormalsCCW() ? 1.f : -1.f;
+
+  if (normal_by_ctrl_point) {
+    // Iterate through all vertices and stores position.
+    for (int v = 0; v < vertex_count; ++v) {
+      part.positions[v] = _converter->ConvertPoint(control_points[v]);
+    }
+
+    // Processes normals
+    const FbxGeometryElementNormal* normal_element = _fbx_mesh->GetElementNormal(0);
     const bool indirect =
       normal_element->GetReferenceMode() != FbxLayerElement::eDirect;
     for (int v = 0; v < vertex_count; ++v) {
       const int lv = indirect ? normal_element->GetIndexArray().GetAt(v) : v;
       const FbxVector4 in =
-        normal_element->GetDirectArray().GetAt(lv) * ccw_multiplier;
-      _skinned_mesh_part->normals[v] = _converter->ConvertNormal(in);
+        normal_element->GetDirectArray()[lv] * ccw_multiplier;
+      part.normals[v] = _converter->ConvertNormal(in);
+    }
+
+    //  Builds triangle indices.
+    const int index_count = _fbx_mesh->GetPolygonVertexCount();
+    _skinned_mesh->triangle_indices.resize(index_count);
+
+    const int* indices = _fbx_mesh->GetPolygonVertices();
+    for(int p = 0; p < index_count; ++p) {
+      _skinned_mesh->triangle_indices[p] = static_cast<uint16_t>(indices[p]);
     }
   } else {
-    // Set a default value.
-    for (int v = 0; v < vertex_count; ++v) {
-      _skinned_mesh_part->normals[v] = ozz::math::Float3::y_axis();
+    // Resize indices. Every vertex is unique.
+    _skinned_mesh->triangle_indices.resize(vertex_count);
+
+    for (int p = 0; p < _fbx_mesh->GetPolygonCount(); ++p) {
+      assert(_fbx_mesh->GetPolygonSize(p) == 3 &&
+             "Mesh must have been triangulated.");
+      for (int v = 0; v < 3; ++v) {
+        const int src_ctrl_point = _fbx_mesh->GetPolygonVertex(p, v);
+        const int dest_vertex_index = p * 3 + v;
+
+        // Get vertex position.
+        part.positions[dest_vertex_index] =
+          _converter->ConvertPoint(control_points[src_ctrl_point]);
+
+        // Get vertex normal.
+        FbxVector4 src_normal;
+        _fbx_mesh->GetPolygonVertexNormal(p, v, src_normal);
+        part.normals[dest_vertex_index] =
+          _converter->ConvertNormal(src_normal * ccw_multiplier);
+
+        // Push vertex index.
+        _skinned_mesh->triangle_indices[dest_vertex_index] =
+          static_cast<uint16_t>(dest_vertex_index);
+      }
     }
   }
 
   // Fails if no vertex in the mesh.
-  return _skinned_mesh_part->vertex_count() != 0;
+  return part.vertex_count() != 0;
 }
 
 namespace {
@@ -112,7 +169,7 @@ bool SortInfluenceWeights(const SkinMapping& _left, const SkinMapping& _right) {
 }
 }  // namespace
 
-bool BuildSkin(FbxMesh* _mesh,
+bool BuildSkin(FbxMesh* _fbx_mesh,
                ozz::animation::offline::fbx::FbxSystemConverter* _converter,
                const ozz::animation::Skeleton& _skeleton,
                ozz::sample::SkinnedMesh* _skinned_mesh) {
@@ -120,7 +177,7 @@ bool BuildSkin(FbxMesh* _mesh,
          _skinned_mesh->parts[0].vertex_count() != 0);
   ozz::sample::SkinnedMesh::Part& part = _skinned_mesh->parts[0];
 
-  const int skin_count = _mesh->GetDeformerCount(FbxDeformer::eSkin);
+  const int skin_count = _fbx_mesh->GetDeformerCount(FbxDeformer::eSkin);
   if (skin_count == 0) {
     ozz::log::Err() << "No skin found." << std::endl;
     return false;
@@ -133,7 +190,7 @@ bool BuildSkin(FbxMesh* _mesh,
   }
 
   // Get skinning indices and weights.
-  FbxSkin* deformer = static_cast<FbxSkin*>(_mesh->GetDeformer(0, FbxDeformer::eSkin));
+  FbxSkin* deformer = static_cast<FbxSkin*>(_fbx_mesh->GetDeformer(0, FbxDeformer::eSkin));
   FbxSkin::EType skinning_type = deformer->GetSkinningType();
   if (skinning_type != FbxSkin::eRigid &&
       skinning_type != FbxSkin::eLinear) {
@@ -161,9 +218,9 @@ bool BuildSkin(FbxMesh* _mesh,
 
   // Computes geometry matrix.
   const FbxAMatrix geometry_matrix(
-    _mesh->GetNode()->GetGeometricTranslation(FbxNode::eSourcePivot),
-    _mesh->GetNode()->GetGeometricRotation(FbxNode::eSourcePivot),
-    _mesh->GetNode()->GetGeometricScaling(FbxNode::eSourcePivot));
+    _fbx_mesh->GetNode()->GetGeometricTranslation(FbxNode::eSourcePivot),
+    _fbx_mesh->GetNode()->GetGeometricRotation(FbxNode::eSourcePivot),
+    _fbx_mesh->GetNode()->GetGeometricScaling(FbxNode::eSourcePivot));
 
   const int cluster_count = deformer->GetClusterCount();
   for (int c = 0; c < cluster_count; ++c)
@@ -287,19 +344,6 @@ bool BuildSkin(FbxMesh* _mesh,
   }
 
   return !vertex_isnt_influenced;
-}
-
-bool BuildTriangleIndices(FbxMesh* _mesh,
-                          ozz::sample::SkinnedMesh* _skinned_mesh) {
-  //  Builds triangle indices.
-  const int index_count = _mesh->GetPolygonVertexCount();
-  _skinned_mesh->triangle_indices.resize(index_count);
-
-  const int* indices = _mesh->GetPolygonVertices();
-  for(int p = 0; p < index_count; ++p) {
-    _skinned_mesh->triangle_indices[p] = static_cast<uint16_t>(indices[p]);
-  }
-  return true;
 }
 
 bool SplitParts(const ozz::sample::SkinnedMesh& _skinned_mesh,
@@ -514,17 +558,18 @@ int main(int _argc, const char** _argv) {
     }
   }
 
-  scene_loader.scene()->ConvertMeshNormals();
 
   FbxMesh* mesh = scene_loader.scene()->GetSrcObject<FbxMesh>(0);
+  if(scene_loader.scene()->GetSrcObjectCount<FbxMesh>()>1){
+    mesh = scene_loader.scene()->GetSrcObject<FbxMesh>(3);
+  }
   mesh->RemoveBadPolygons();
 
   ozz::sample::SkinnedMesh skinned_mesh;
   skinned_mesh.parts.resize(1);
-  ozz::sample::SkinnedMesh::Part& skinned_mesh_part = skinned_mesh.parts[0];
 
   ozz::log::LogV() << "Reading vertices." << std::endl;
-  if (!BuildVertices(mesh, scene_loader.converter(), &skinned_mesh_part)) {
+  if (!BuildVertices(mesh, scene_loader.converter(), &skinned_mesh)) {
     ozz::log::Err() << "Failed to read vertices." << std::endl;
     return EXIT_FAILURE;
   }
@@ -534,17 +579,11 @@ int main(int _argc, const char** _argv) {
     ozz::log::Err() << "Failed to read skinning data." << std::endl;
     return EXIT_FAILURE;
   }
-  
-  ozz::log::LogV() << "Reading triangle indices." << std::endl;
-  if (!BuildTriangleIndices(mesh, &skinned_mesh)) {
-    ozz::log::Err() << "Failed to read triangle indices." << std::endl;
-    return EXIT_FAILURE;
-  }
 
-  ozz::log::LogV() << "Partionning meshes." << std::endl;
+  ozz::log::LogV() << "Partitioning meshes." << std::endl;
   ozz::sample::SkinnedMesh partitioned_meshes;
   if (!SplitParts(skinned_mesh, &partitioned_meshes)) {
-    ozz::log::Err() << "Failed to partionned meshes." << std::endl;
+    ozz::log::Err() << "Failed to partitioned meshes." << std::endl;
     return EXIT_FAILURE;
   }
 

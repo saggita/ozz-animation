@@ -144,7 +144,6 @@ class Camera {
   // The position of the mouse, the last time it has been seen.
   int mouse_last_x_;
   int mouse_last_y_;
-  int mouse_last_mb_;
   int mouse_last_wheel_;
 
   // Set to true to automatically frame the camera on the whole scene.

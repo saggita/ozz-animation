@@ -85,7 +85,6 @@ Camera::Camera()
       remaining_animation_time_(0.f),
       mouse_last_x_(0),
       mouse_last_y_(0),
-      mouse_last_mb_(GLFW_RELEASE),
       mouse_last_wheel_(0),
       auto_framing_(true) {
 }

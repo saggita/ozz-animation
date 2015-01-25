@@ -235,7 +235,7 @@ class SkinSampleApplication : public ozz::sample::Application {
       uint16_t* indices = buffer.data.begin;
       for (int i = 0; i < index_count; ++i) {
         *indices = mesh_.triangle_indices[i];
-        indices = ozz::PointerStride(indices, + buffer.stride);
+        indices = ozz::PointerStride(indices, buffer.stride);
       }
     }
 

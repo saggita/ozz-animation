@@ -49,20 +49,14 @@
 #include "ozz/options/options.h"
 
 #include <algorithm>
+#include <limits>
 
 // Declares command line options.
 OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies the skeleton that the skin is bound to.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skin, "Specifies ozz skin ouput file.", "", true)
 
-struct PolygonVertex {
-  int polygon;
-  int vertex;
-  int offset;
-};
-
-typedef ozz::Vector<PolygonVertex>::Std ControlPointRemap;
-
+typedef ozz::Vector<uint16_t>::Std ControlPointRemap;
 typedef ozz::Vector<ControlPointRemap>::Std ControlPointsRemap;
 
 bool BuildVertices(FbxMesh* _fbx_mesh,
@@ -95,82 +89,81 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
   // as they should all be triangles.
   int vertex_count = _fbx_mesh->GetPolygonCount() * 3;
 
-  // Stores triangle indices as int, as they can overflow until redundant
-  // vertices are weld.
-  ozz::Vector<int>::Std triangle_indices(vertex_count);
-  for (int i = 0; i < vertex_count; ++i) {
-    triangle_indices[i] = i;
-  }
+  // Reserve vertex buffers. Real size is unknown as redundant vertices will be
+  // rejected.
+  ozz::sample::SkinnedMesh::Part& part = _skinned_mesh->parts[0];
+  part.positions.reserve(vertex_count);
+  part.normals.reserve(vertex_count);
+
+  // Resize triangle indices, as their size is known.
+  _skinned_mesh->triangle_indices.resize(vertex_count);
 
   // Iterate all polygons and stores ctrl point to polygon mappings.
+  float ccw_multiplier = _fbx_mesh->CheckIfVertexNormalsCCW() ? 1.f : -1.f;
   const int polygon_count = _fbx_mesh->GetPolygonCount();
   for (int p = 0; p < polygon_count; ++p) {
     assert(_fbx_mesh->GetPolygonSize(p) == 3 &&
            "Mesh must have been triangulated.");
 
     for (int v = 0; v < 3; ++v) {
-      // Fills control point remapping.
-      const int ctrl_point = _fbx_mesh->GetPolygonVertex(p, v);
-      const PolygonVertex polygon_vertex = {p, v, p * v + 3};
-      ControlPointRemap& remap = _remap->at(ctrl_point);
-      remap.push_back(polygon_vertex);
-    }
-  }
-  /*
-  // Remove redundant vertices.
-  for (size_t c = 0; c < _remap->size(); ++c) {
-    ControlPointRemap& remap = _remap->at(c);
 
-    for (size_t pv = 1; pv < remap.size(); ++pv) {
-      const PolygonVertex& polygon_vertex = remap[pv];
-      triangle_indices[polygon_vertex.offset] = c;
-    }
-
-    // TEMP
-    remap.resize(1);
-  }*/
-
-  // Fills output mesh.
-  ozz::sample::SkinnedMesh::Part& part = _skinned_mesh->parts[0];
-  part.positions.reserve(vertex_count);
-  part.normals.reserve(vertex_count);
-  float ccw_multiplier = _fbx_mesh->CheckIfVertexNormalsCCW() ? 1.f : -1.f;
-
-  for (int p = 0; p < polygon_count; ++p) {
-    for (int v = 0; v < 3; ++v) {
-      // Push this polygon vertex to the buffer if it hasnt been rejected.
+      // Get control point.
       const int ctrl_point = _fbx_mesh->GetPolygonVertex(p, v);
       ControlPointRemap& remap = _remap->at(ctrl_point);
-      for (size_t mpv = 0; mpv < remap.size(); ++mpv) {
-        PolygonVertex& polygon_vertex = remap[mpv];
-        if (polygon_vertex.polygon == p && polygon_vertex.vertex == v) {
 
-          // Stores vertex offset in the output vertex buffer.
-          polygon_vertex.offset = static_cast<int>(part.positions.size());
+      // Get vertex position.
+      const ozz::math::Float3 position =
+        _converter->ConvertPoint(_fbx_mesh->GetControlPoints()[ctrl_point]);
 
-          // Get vertex position.
-          const FbxVector4* control_points = _fbx_mesh->GetControlPoints();
-          part.positions.push_back(
-            _converter->ConvertPoint(control_points[ctrl_point]));
+      // Get vertex normal.
+      FbxVector4 src_normal;
+      _fbx_mesh->GetPolygonVertexNormal(p, v, src_normal);
+      const ozz::math::Float3 normal = Normalize(
+        _converter->ConvertNormal(src_normal * ccw_multiplier));
 
-          // Get vertex normal.
-          FbxVector4 src_normal;
-          _fbx_mesh->GetPolygonVertexNormal(
-            polygon_vertex.polygon, polygon_vertex.vertex, src_normal);
-          part.normals.push_back(
-            _converter->ConvertNormal(src_normal * ccw_multiplier));
+      // Check for vertex redundancy, only with other points that share the same
+      // control point.
+      int redundant_with = -1;
+      for (size_t r = 0; r < remap.size(); ++r) {
+        int to_test = remap[r];
 
+        // Check for identical normals.
+        if (normal == part.normals[to_test]) {
+          redundant_with = to_test;
           break;
         }
       }
-    }
-  }
 
-  // Transfer triangle indices to the mesh.
-  _skinned_mesh->triangle_indices.resize(triangle_indices.size());
-  for (size_t i = 0; i < triangle_indices.size(); ++i) {
-    _skinned_mesh->triangle_indices[i] =
-      static_cast<uint16_t>(triangle_indices[i]);
+      if (redundant_with >= 0) {
+        assert(redundant_with <= std::numeric_limits<uint16_t>::max());
+
+        // Reuse existing vertex.
+        _skinned_mesh->triangle_indices[p * 3 + v] =
+          static_cast<uint16_t>(redundant_with);
+      } else {
+
+        // Detect triangle indices overflow.
+        if (part.positions.size() > std::numeric_limits<uint16_t>::max()) {
+          ozz::log::Err() << "Mesh uses too many vertices (> " <<
+            std::numeric_limits<uint16_t>::max() << ") to fit in the index "
+            "buffer." << std::endl;
+          return false;
+        }
+
+        // Deduce this vertex offset in the output vertex buffer.
+        uint16_t vertex_index = static_cast<uint16_t>(part.positions.size());
+
+        // Build triangle indices.
+        _skinned_mesh->triangle_indices[p * 3 + v] = vertex_index;
+
+        // Stores vertex offset in the output vertex buffer.
+        _remap->at(ctrl_point).push_back(vertex_index);
+
+        // Push vertex data.
+        part.positions.push_back(position);
+        part.normals.push_back(normal);
+      }
+    }
   }
 
   // Fails if no vertex in the mesh.
@@ -304,13 +297,13 @@ bool BuildSkin(FbxMesh* _fbx_mesh,
       // Sometimes, the mesh can have less points than at the time of the
       // skinning because a smooth operator was active when skinning but has
       // been deactivated during export.
-      const size_t ctrl_point = ctrl_point_indices[c];
+      const int ctrl_point = ctrl_point_indices[c];
       if (ctrl_point < _fbx_mesh->GetControlPointsCount() &&
           mapping.weight > 0.f) {
         const ControlPointRemap& remap = _remap[ctrl_point];
         assert(remap.size());
         for (size_t v = 0; v < remap.size(); ++v) {
-          vertex_skin_mappings[remap[v].offset].push_back(mapping);
+          vertex_skin_mappings[remap[v]].push_back(mapping);
         }
       }
     }

@@ -56,9 +56,19 @@ OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies the skeleton that the skin is bound to.", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skin, "Specifies ozz skin ouput file.", "", true)
 
+namespace {
+
+// Control point to vertex buffer remapping.
 typedef ozz::Vector<uint16_t>::Std ControlPointRemap;
 typedef ozz::Vector<ControlPointRemap>::Std ControlPointsRemap;
 
+// Triangle indices sort function.
+int SortTriangles(const void* _left, const void* _right) {
+  const uint16_t* left = static_cast<const uint16_t*>(_left);
+  const uint16_t* right = static_cast<const uint16_t*>(_right);
+  return (left[0] + left[1] + left[2]) - (right[0] + right[1] + right[2]);
+}
+}  // namespace
 bool BuildVertices(FbxMesh* _fbx_mesh,
                    ozz::animation::offline::fbx::FbxSystemConverter* _converter,
                    ControlPointsRemap* _remap,
@@ -165,6 +175,12 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
       }
     }
   }
+
+  // Sort triangle indices to optimize vertex cache.
+  std::qsort(array_begin(_skinned_mesh->triangle_indices),
+             _skinned_mesh->triangle_indices.size() / 3,
+             sizeof(uint16_t) * 3,
+             &SortTriangles);
 
   // Fails if no vertex in the mesh.
   return _skinned_mesh->vertex_count() != 0;

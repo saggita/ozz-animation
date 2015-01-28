@@ -274,6 +274,8 @@ class SkinSampleApplication : public ozz::sample::Application {
 
     // The number of joints of the mesh needs to match skeleton.
     if (mesh_.num_joints() != num_joints) {
+      ozz::log::Err() << "The provided mesh doesn't match skeleton "
+        "(joint count mismatch)." << std::endl;
       return false;
     }
 

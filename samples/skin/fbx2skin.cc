@@ -69,10 +69,11 @@ int SortTriangles(const void* _left, const void* _right) {
   return (left[0] + left[1] + left[2]) - (right[0] + right[1] + right[2]);
 }
 }  // namespace
+
 bool BuildVertices(FbxMesh* _fbx_mesh,
                    ozz::animation::offline::fbx::FbxSystemConverter* _converter,
                    ControlPointsRemap* _remap,
-                   ozz::sample::SkinnedMesh* _skinned_mesh) {
+                   ozz::sample::SkinnedMesh* _output_mesh) {
 
   // This function treat all layers like if they were using mapping mode
   // eByPolygonVertex. This allow to use a single code path for all mapping
@@ -101,12 +102,12 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
 
   // Reserve vertex buffers. Real size is unknown as redundant vertices will be
   // rejected.
-  ozz::sample::SkinnedMesh::Part& part = _skinned_mesh->parts[0];
+  ozz::sample::SkinnedMesh::Part& part = _output_mesh->parts[0];
   part.positions.reserve(vertex_count);
   part.normals.reserve(vertex_count);
 
   // Resize triangle indices, as their size is known.
-  _skinned_mesh->triangle_indices.resize(vertex_count);
+  _output_mesh->triangle_indices.resize(vertex_count);
 
   // Iterate all polygons and stores ctrl point to polygon mappings.
   float ccw_multiplier = _fbx_mesh->CheckIfVertexNormalsCCW() ? 1.f : -1.f;
@@ -148,7 +149,7 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
         assert(redundant_with <= std::numeric_limits<uint16_t>::max());
 
         // Reuse existing vertex.
-        _skinned_mesh->triangle_indices[p * 3 + v] =
+        _output_mesh->triangle_indices[p * 3 + v] =
           static_cast<uint16_t>(redundant_with);
       } else {
 
@@ -164,7 +165,7 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
         uint16_t vertex_index = static_cast<uint16_t>(part.positions.size());
 
         // Build triangle indices.
-        _skinned_mesh->triangle_indices[p * 3 + v] = vertex_index;
+        _output_mesh->triangle_indices[p * 3 + v] = vertex_index;
 
         // Stores vertex offset in the output vertex buffer.
         _remap->at(ctrl_point).push_back(vertex_index);
@@ -177,13 +178,12 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
   }
 
   // Sort triangle indices to optimize vertex cache.
-  std::qsort(array_begin(_skinned_mesh->triangle_indices),
-             _skinned_mesh->triangle_indices.size() / 3,
+  std::qsort(array_begin(_output_mesh->triangle_indices),
+             _output_mesh->triangle_indices.size() / 3,
              sizeof(uint16_t) * 3,
              &SortTriangles);
 
-  // Fails if no vertex in the mesh.
-  return _skinned_mesh->vertex_count() != 0;
+  return true;
 }
 
 namespace {
@@ -207,10 +207,10 @@ bool BuildSkin(FbxMesh* _fbx_mesh,
                ozz::animation::offline::fbx::FbxSystemConverter* _converter,
                const ControlPointsRemap& _remap,
                const ozz::animation::Skeleton& _skeleton,
-               ozz::sample::SkinnedMesh* _skinned_mesh) {
-  assert(_skinned_mesh->parts.size() == 1 &&
-         _skinned_mesh->parts[0].vertex_count() != 0);
-  ozz::sample::SkinnedMesh::Part& part = _skinned_mesh->parts[0];
+               ozz::sample::SkinnedMesh* _output_mesh) {
+  assert(_output_mesh->parts.size() == 1 &&
+         _output_mesh->parts[0].vertex_count() != 0);
+  ozz::sample::SkinnedMesh::Part& part = _output_mesh->parts[0];
 
   const int skin_count = _fbx_mesh->GetDeformerCount(FbxDeformer::eSkin);
   if (skin_count == 0) {
@@ -218,10 +218,9 @@ bool BuildSkin(FbxMesh* _fbx_mesh,
     return false;
   }
   if (skin_count > 1) {
-    ozz::log::Err() <<
+    ozz::log::Log() <<
       "More than one skin found, only the first one will be processed." <<
       std::endl;
-    return false;
   }
 
   // Get skinning indices and weights.
@@ -241,9 +240,9 @@ bool BuildSkin(FbxMesh* _fbx_mesh,
   }
 
   // Resize inverse bind pose matrices and set all to identity.
-  _skinned_mesh->inverse_bind_poses.resize(_skeleton.num_joints());
+  _output_mesh->inverse_bind_poses.resize(_skeleton.num_joints());
   for (int i = 0; i < _skeleton.num_joints(); ++i) {
-    _skinned_mesh->inverse_bind_poses[i] = ozz::math::Float4x4::identity();
+    _output_mesh->inverse_bind_poses[i] = ozz::math::Float4x4::identity();
   }
 
   // Resize to the number of vertices
@@ -269,8 +268,7 @@ bool BuildSkin(FbxMesh* _fbx_mesh,
     }
 
     const FbxCluster::ELinkMode mode = cluster->GetLinkMode();
-    if (mode != FbxCluster::eNormalize &&
-        mode != FbxCluster::eTotalOne) {
+    if (mode != FbxCluster::eNormalize) {
       ozz::log::Err() << "Unsuported link mode for joint " << node->GetName() <<
         "." << std::endl;
       return false;
@@ -297,7 +295,7 @@ bool BuildSkin(FbxMesh* _fbx_mesh,
       transform_link_matrix.Inverse() * transform_matrix;
 
     // Stores inverse transformation.
-    _skinned_mesh->inverse_bind_poses[joint] =
+    _output_mesh->inverse_bind_poses[joint] =
       _converter->ConvertMatrix(inverse_bind_pose);
 
     // Affect joint to all vertices of the cluster.
@@ -387,16 +385,17 @@ bool BuildSkin(FbxMesh* _fbx_mesh,
   return !vertex_isnt_influenced;
 }
 
-bool SplitParts(const ozz::sample::SkinnedMesh& _skinned_mesh,
+bool SplitParts(const ozz::sample::SkinnedMesh& _output_mesh,
                 ozz::sample::SkinnedMesh* _partitionned_mesh) {
-  assert(_skinned_mesh.parts.size() == 1);
+  assert(_output_mesh.parts.size() == 1);
   assert(_partitionned_mesh->parts.size() == 0);
 
-  const ozz::sample::SkinnedMesh::Part& in_part = _skinned_mesh.parts.front();
+  const ozz::sample::SkinnedMesh::Part& in_part = _output_mesh.parts.front();
   const size_t vertex_count = in_part.vertex_count();
 
   // Creates one mesh part per influence.
   const int max_influences = in_part.influences_count();
+  assert(max_influences > 0);
 
   // Bucket-sort vertices per influence count.
   typedef ozz::Vector<ozz::Vector<size_t>::Std>::Std BuckedVertices;
@@ -499,15 +498,15 @@ bool SplitParts(const ozz::sample::SkinnedMesh& _skinned_mesh,
   }
 
   // Remaps triangle indices, using vertex mapping table.
-  const size_t index_count = _skinned_mesh.triangle_indices.size();
+  const size_t index_count = _output_mesh.triangle_indices.size();
   _partitionned_mesh->triangle_indices.resize(index_count);
   for (size_t i = 0; i < index_count; ++i) {
     _partitionned_mesh->triangle_indices[i] =
-      vertices_remap[_skinned_mesh.triangle_indices[i]];
+      vertices_remap[_output_mesh.triangle_indices[i]];
   }
 
   // Copy bind pose matrices
-  _partitionned_mesh->inverse_bind_poses = _skinned_mesh.inverse_bind_poses;
+  _partitionned_mesh->inverse_bind_poses = _output_mesh.inverse_bind_poses;
 
   return true;
 }
@@ -599,43 +598,46 @@ int main(int _argc, const char** _argv) {
     }
   }
 
-
+  // Take the first mesh
   FbxMesh* mesh = scene_loader.scene()->GetSrcObject<FbxMesh>(0);
-  // TEMP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if(scene_loader.scene()->GetSrcObjectCount<FbxMesh>()>1){
-    mesh = scene_loader.scene()->GetSrcObject<FbxMesh>(3);
-  }
-
   mesh->RemoveBadPolygons();
 
-  ozz::sample::SkinnedMesh skinned_mesh;
-  skinned_mesh.parts.resize(1);
+  ozz::sample::SkinnedMesh output_mesh;
+  output_mesh.parts.resize(1);
 
   ControlPointsRemap remap;
 
   ozz::log::LogV() << "Reading vertices." << std::endl;
-  if (!BuildVertices(mesh, scene_loader.converter(), &remap, &skinned_mesh)) {
+  if (!BuildVertices(mesh, scene_loader.converter(), &remap, &output_mesh)) {
     ozz::log::Err() << "Failed to read vertices." << std::endl;
     return EXIT_FAILURE;
   }
-  
-  ozz::log::LogV() << "Reading skinning data." << std::endl;
-  if (!BuildSkin(mesh, scene_loader.converter(), remap, skeleton, &skinned_mesh)) {
-    ozz::log::Err() << "Failed to read skinning data." << std::endl;
-    return EXIT_FAILURE;
+
+  if (mesh->GetDeformerCount(FbxDeformer::eSkin) > 0) {
+    ozz::log::LogV() << "Reading skinning data." << std::endl;
+    if (!BuildSkin(mesh, scene_loader.converter(), remap, skeleton, &output_mesh)) {
+      ozz::log::Err() << "Failed to read skinning data." << std::endl;
+      return EXIT_FAILURE;
+    }
   }
 
-  ozz::log::LogV() << "Partitioning meshes." << std::endl;
-  ozz::sample::SkinnedMesh partitioned_meshes;
-  if (!SplitParts(skinned_mesh, &partitioned_meshes)) {
-    ozz::log::Err() << "Failed to partitioned meshes." << std::endl;
-    return EXIT_FAILURE;
-  }
+  if (output_mesh.skinned()) {
+    ozz::sample::SkinnedMesh partitioned_meshes;
 
-  ozz::log::LogV() << "Stripping skinning weights." << std::endl;
-  if (!StripWeights(&partitioned_meshes)) {
-    ozz::log::Err() << "Failed to strip weights." << std::endl;
-    return EXIT_FAILURE;
+    ozz::log::LogV() << "Partitioning meshes." << std::endl;
+    if (!SplitParts(output_mesh, &partitioned_meshes)) {
+      ozz::log::Err() << "Failed to partitioned meshes." << std::endl;
+      return EXIT_FAILURE;
+    }
+
+    ozz::log::LogV() << "Stripping skinning weights." << std::endl;
+    if (!StripWeights(&partitioned_meshes)) {
+      ozz::log::Err() << "Failed to strip weights." << std::endl;
+      return EXIT_FAILURE;
+    }
+
+    // Copy partitioned mesh back to the output mesh.
+    output_mesh = partitioned_meshes;
   }
 
   // Opens output file.
@@ -648,7 +650,7 @@ int main(int _argc, const char** _argv) {
 
   { // Serialize the partitioned mesh.
     ozz::io::OArchive archive(&skin_file);
-    archive << partitioned_meshes;
+    archive << output_mesh;
   }
 
   ozz::log::Log() << "Mesh binary archive successfully outputted for file " <<

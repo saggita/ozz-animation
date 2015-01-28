@@ -150,7 +150,7 @@ bool ExtractAnimation(FbxSceneLoader* _scene_loader,
     track.scales.reserve(max_keys);
 
     // Evaluate joint transformation at the specified time.
-    // Make sure to include "end" time, and loop once at least.
+    // Make sure to include "end" time, and enter the loop once at least.
     bool loop_again = true;
     for (float t = start; loop_again; t += sampling_period) {
       if (t >= end) {
@@ -159,11 +159,11 @@ bool ExtractAnimation(FbxSceneLoader* _scene_loader,
       }
 
       // Evaluate local transform at fbx_time.
-      bool root = _skeleton.joint_properties()[i].parent == Skeleton::kNoParentIndex;
       const ozz::math::Transform transform =
         _scene_loader->converter()->ConvertTransform(
-          root?evaluator->GetNodeGlobalTransform(node, FbxTimeSeconds(t)):
-               evaluator->GetNodeLocalTransform(node, FbxTimeSeconds(t)));
+          _skeleton.joint_properties()[i].parent == Skeleton::kNoParentIndex?
+            evaluator->GetNodeGlobalTransform(node, FbxTimeSeconds(t)):
+            evaluator->GetNodeLocalTransform(node, FbxTimeSeconds(t)));
 
       // Fills corresponding track.
       const float local_time = t - start;

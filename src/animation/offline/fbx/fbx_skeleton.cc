@@ -86,7 +86,7 @@ bool RecurseNode(FbxNode* _node,
     // Extract bind pose.
     this_joint->transform =
       _converter->ConvertTransform(_parent?_node->EvaluateLocalTransform():
-                                            _node->EvaluateGlobalTransform());
+                                           _node->EvaluateGlobalTransform());
 
     // One level deeper in the hierarchy.
     _depth++;

@@ -73,6 +73,16 @@ struct SkinnedMesh {
     return max_influences_count;
   }
 
+  // Test if the mesh has skinning informations.
+  bool skinned() const {
+    for (size_t i = 0; i < parts.size(); ++i) {
+      if (parts[i].influences_count() != 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Returns the number of joints used to skin the mesh.
   int num_joints() {
     return static_cast<int>(inverse_bind_poses.size());

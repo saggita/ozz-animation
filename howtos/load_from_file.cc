@@ -66,8 +66,8 @@ int main(int argc, char const *argv[]) {
     // Now tries to open the file, which was provided as argument.
     // A file in ozz is a ozz::io::File, which implements ozz::io::Stream
     // interface and complies with std FILE specifications.
-    // ozz::io::FileStream follows RAII programming idiom, which ensures that
-    // the file will always be closed (by ozz::io::FileStream destructor).
+    // ozz::io::File follows RAII programming idiom, which ensures that the file
+    // will always be closed (by ozz::io::FileStream destructor).
     ozz::io::File file(filename, "r");
 
     // Checks file status, which can be closed if filename is invalid.

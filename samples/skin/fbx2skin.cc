@@ -315,7 +315,7 @@ bool BuildSkin(FbxMesh* _fbx_mesh,
       if (ctrl_point < _fbx_mesh->GetControlPointsCount() &&
           mapping.weight > 0.f) {
         const ControlPointRemap& remap = _remap[ctrl_point];
-        assert(remap.size());
+        assert(remap.size() >= 1);  // At least a 1-1 mapping.
         for (size_t v = 0; v < remap.size(); ++v) {
           vertex_skin_mappings[remap[v]].push_back(mapping);
         }

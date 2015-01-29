@@ -269,7 +269,7 @@ bool BuildSkin(FbxMesh* _fbx_mesh,
 
     const FbxCluster::ELinkMode mode = cluster->GetLinkMode();
     if (mode != FbxCluster::eNormalize) {
-      ozz::log::Err() << "Unsuported link mode for joint " << node->GetName() <<
+      ozz::log::Err() << "Unsupported link mode for joint " << node->GetName() <<
         "." << std::endl;
       return false;
     }

@@ -70,7 +70,7 @@ int main(int argc, char const *argv[]) {
     // interface and complies with std FILE specifications.
     // ozz::io::File follows RAII programming idiom, which ensures that the file
     // will always be closed (by ozz::io::FileStream destructor).
-    ozz::io::File file(filename, "r");
+    ozz::io::File file(filename, "rb");
 
     // Checks file status, which can be closed if filename is invalid.
     if (!file.opened()) {

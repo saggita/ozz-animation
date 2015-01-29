@@ -619,12 +619,9 @@ int main(int _argc, const char** _argv) {
       ozz::log::Err() << "Failed to read skinning data." << std::endl;
       return EXIT_FAILURE;
     }
-  }
-
-  if (output_mesh.skinned()) {
-    ozz::sample::SkinnedMesh partitioned_meshes;
 
     ozz::log::LogV() << "Partitioning meshes." << std::endl;
+    ozz::sample::SkinnedMesh partitioned_meshes;
     if (!SplitParts(output_mesh, &partitioned_meshes)) {
       ozz::log::Err() << "Failed to partitioned meshes." << std::endl;
       return EXIT_FAILURE;

@@ -32,9 +32,11 @@
 #include "ozz/base/log.h"
 
 // Provides files abstraction.
+// See "http://code.google.com/p/ozz-animation/wiki/Advanced#File_IO_management"
 #include "ozz/base/io/stream.h"
 
 // Provides serialization/deserialization mechanism.
+// See "http://code.google.com/p/ozz-animation/wiki/Advanced#Serialization_mechanics"
 #include "ozz/base/io/archive.h"
 
 // Uses the skeleton as an example of object to read.
@@ -42,8 +44,8 @@
 
 #include <cstdlib>
 
-// Code for ozz-animation HowTo: "How to write a custon skeleton importer?"
-// "http://code.google.com/p/ozz-animation/wiki/HowTos#How_to_load_from_a_file?"
+// Code for ozz-animation HowTo: "How to load an object from a file?"
+// "http://code.google.com/p/ozz-animation/wiki/HowTos#How_to_load_an_object_from_a_file?"
 
 int main(int argc, char const *argv[]) {
   (void)argc;
@@ -96,7 +98,7 @@ int main(int argc, char const *argv[]) {
     // a skeleton tag.
     // Tagging is not mandatory for all object types. It's usually only used for
     // high level object types (skeletons, animations...), but not low level
-    // ones (math, native types...).
+    // ones (math objects, native types...).
     if (!archive.TestTag<ozz::animation::Skeleton>()) {
       ozz::log::Err() << "Archive doesn't contain the expected object type." <<
         std::endl;

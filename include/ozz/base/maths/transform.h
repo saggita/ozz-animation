@@ -51,8 +51,10 @@ struct Transform {
   // Scale affine transformation component.
   Float3 scale;
 
+  // Builds an identity transform.
   static OZZ_INLINE Transform identity() {
-    const Transform ret = {Float3::zero(), Quaternion::identity(), Float3::one()};
+    const Transform ret = {
+      Float3::zero(), Quaternion::identity(), Float3::one()};
     return ret;
   }
 };

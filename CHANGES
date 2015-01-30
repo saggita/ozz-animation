@@ -15,8 +15,8 @@ Release version 0.7.2.----------------------------------------------------------
   and dae2anim) which is now deprecated.
 
  # HowTos
-  - Adds file loading how-to, which demonstrates howto deserialize an object
-  with ozz archive library.
+  - Adds file loading how-to, which demonstrates how to open a file and
+  deserialize an object with ozz archive library.
   - Adds custom skeleton importer how-to, which demonstrates RawSkeleton setup
   and conversion to runtime skleton.
   - Adds custom animation importer how-to, which demonstrates RawAnimation setup

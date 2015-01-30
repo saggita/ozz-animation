@@ -36,6 +36,9 @@
 namespace ozz {
 namespace animation {
 
+// Get bind-pose of a skeleton joints.
+ozz::math::Transform GetJointBindPose(const Skeleton& _skeleton, int _joint);
+
 // Defines the iterator structure used by IterateJointsDF to traverse joint
 // hierarchy.
 struct JointsIterator {

@@ -30,10 +30,37 @@
 
 #include "ozz/animation/runtime/skeleton_utils.h"
 
+#include "ozz/base/maths/transform.h"
+#include "ozz/base/maths/soa_transform.h"
+
 #include <assert.h>
 
 namespace ozz {
 namespace animation {
+
+// Unpacks skeleton bind pose stored in soa format by the skeleton.
+ozz::math::Transform GetJointBindPose(const Skeleton& _skeleton, int _joint) {
+
+  const ozz::math::SoaTransform& soa_transform =
+    _skeleton.bind_pose()[_joint / 4];
+
+  // Transpose SoA data to AoS.
+  ozz::math::SimdFloat4 translations[4];
+  ozz::math::Transpose3x4(&soa_transform.translation.x, translations);
+  ozz::math::SimdFloat4 rotations[4];
+  ozz::math::Transpose4x4(&soa_transform.rotation.x, rotations);
+  ozz::math::SimdFloat4 scales[4];
+  ozz::math::Transpose3x4(&soa_transform.scale.x, scales);
+
+  // Stores to the Transform object.
+  math::Transform bind_pose;
+  const int offset = _joint % 4;
+  ozz::math::Store3PtrU(translations[offset], &bind_pose.translation.x);
+  ozz::math::StorePtrU(rotations[offset], &bind_pose.rotation.x);
+  ozz::math::Store3PtrU(scales[offset], &bind_pose.scale.x);
+
+  return bind_pose;
+}
 
 // Helper macro used to detect if a joint has a brother.
 #define _HAS_BROTHER(_i, _num_joints, _properties) \

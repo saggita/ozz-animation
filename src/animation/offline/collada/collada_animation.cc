@@ -38,6 +38,8 @@
 
 #include "ozz/base/log.h"
 
+#include "ozz/base/maths/soa_transform.h"
+
 #include "ozz/animation/offline/raw_animation.h"
 
 #include "ozz/animation/runtime/skeleton.h"
@@ -1146,23 +1148,29 @@ bool ExtractAnimation(const AnimationVisitor& _animation_visitor,
 
     // Evaluates all samplers for all sampler keys.
     RawAnimation::JointTrack& output_track = _animation->tracks[i];
-    if (track.samplers.empty() || times.empty()) {
+    if (!track.joint || track.samplers.empty() || times.empty()) {
       ozz::log::Err() << "No animation track found for joint \"" <<
-        _skeleton.joint_names()[i] << "\"." << std::endl;
+        _skeleton.joint_names()[i] << "\". Using skeleton bind-pose instead" <<
+        std::endl;
 
-      // No sampler found, uses bind pose transformation.
+      // Get soa bind pose3
+      const ozz::math::SoaTransform& soa_transform = _skeleton.bind_pose()[i / 4];
+
+      // Build aos bind pose3
+      ozz::math::SimdFloat4 translations[4];
+      ozz::math::SimdFloat4 rotations[4];
+      ozz::math::SimdFloat4 scales[4];
+
+      ozz::math::Transpose3x4(&soa_transform.translation.x, translations);
+      ozz::math::Transpose4x4(&soa_transform.rotation.x, rotations);
+      ozz::math::Transpose3x4(&soa_transform.scale.x, scales);
+
       math::Transform bind_pose;
-      if (!track.joint) {
-        bind_pose = math::Transform::identity();  // No matching animated joint.
-      } else if (!track.joint->GetTransform(&bind_pose)) {
-        log::Err() << "Failed to build bind pose for joint \"" <<
-          track.joint->name << "." << std::endl;
-        return false;
-      }
-      // Convert to ozz y_up/meter system coordinate.
-      const math::Transform bind_pose_y_up =
-        _skeleton_visitor.asset().ConvertTransform(bind_pose);
-      PushKeys(bind_pose_y_up, 0.f, &output_track);
+      ozz::math::Store3PtrU(translations[i % 4], &bind_pose.translation.x);
+      ozz::math::StorePtrU(rotations[i % 4], &bind_pose.rotation.x);
+      ozz::math::Store3PtrU(scales[i % 4], &bind_pose.scale.x);
+
+      PushKeys(bind_pose, 0.f, &output_track);
     } else {  // Uses animated transformations.
       // Uses a local copy of joint NodeTransform's in order to keep joint
       // unchanged. Declares transforms container outside of the loop to avoid

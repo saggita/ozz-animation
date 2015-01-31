@@ -33,8 +33,14 @@
 
 #include "skeleton.h"
 
+#include "ozz/base/maths/transform.h"
+
 namespace ozz {
 namespace animation {
+
+// Get joint's bind-pose as a transform.
+// Result is unknown if joint is outside of [0, num joints[ range.
+math::Transform GetJointBindPose(const Skeleton& _skeleton, int _joint);
 
 // Defines the iterator structure used by IterateJointsDF to traverse joint
 // hierarchy.

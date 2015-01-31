@@ -33,13 +33,12 @@
 #include "animation/offline/fbx/fbx_animation.h"
 
 #include "ozz/animation/runtime/skeleton.h"
+#include "ozz/animation/runtime/skeleton_utils.h"
 #include "ozz/animation/offline/raw_animation.h"
 
 #include "ozz/base/log.h"
 
 #include "ozz/base/maths/transform.h"
-#include "ozz/base/maths/soa_transform.h"
-#include "ozz/base/maths/simd_math.h"
 
 namespace ozz {
 namespace animation {
@@ -104,38 +103,18 @@ bool ExtractAnimation(FbxSceneLoader* _scene_loader,
       ozz::log::Err() << "No animation track found for joint \"" << joint_name
         << "\". Using skeleton bind pose instead." << std::endl;
 
-      // Get soa bind pose3
-      const ozz::math::SoaTransform& soa_transform = _skeleton.bind_pose()[i / 4];
+      // Get joint's bind pose.
+      const ozz::math::Transform& bind_pose =
+        ozz::animation::GetJointBindPose(_skeleton, i);
 
-      // Build aos bind pose3
-      ozz::math::SimdFloat4 translations[4];
-      ozz::math::SimdFloat4 rotations[4];
-      ozz::math::SimdFloat4 scales[4];
+      const RawAnimation::TranslationKey tkey = {0.f, bind_pose.translation};
+      track.translations.push_back(tkey);
 
-      ozz::math::Transpose3x4(&soa_transform.translation.x, translations);
-      ozz::math::Transpose4x4(&soa_transform.rotation.x, rotations);
-      ozz::math::Transpose3x4(&soa_transform.scale.x, scales);
+      const RawAnimation::RotationKey rkey = {0.f, bind_pose.rotation};
+      track.rotations.push_back(rkey);
 
-      {
-        RawAnimation::TranslationKey key;
-        key.time = 0.f;
-        ozz::math::Store3PtrU(translations[i % 4], &key.value.x);
-        track.translations.push_back(key);
-      }
-
-      {
-        RawAnimation::RotationKey key;
-        key.time = 0.f;
-        ozz::math::StorePtrU(rotations[i % 4], &key.value.x);
-        track.rotations.push_back(key);
-      }
-
-      {
-        RawAnimation::ScaleKey key;
-        key.time = 0.f;
-        ozz::math::Store3PtrU(scales[i % 4], &key.value.x);
-        track.scales.push_back(key);
-      }
+      const RawAnimation::ScaleKey skey = {0.f, bind_pose.scale};
+      track.scales.push_back(skey);
 
       continue;
     }

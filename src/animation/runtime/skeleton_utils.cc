@@ -30,13 +30,39 @@
 
 #include "ozz/animation/runtime/skeleton_utils.h"
 
+#include "ozz/base/maths/soa_transform.h"
+
 #include <assert.h>
 
 namespace ozz {
 namespace animation {
 
+math::Transform GetJointBindPose(const Skeleton& _skeleton, int _joint) {
+  assert(_joint < _skeleton.num_joints() && "Joint index out of range");
+
+  // Get joint bind-pose as a SoA transform.
+  const math::SoaTransform& soa_transform = _skeleton.bind_pose()[_joint / 4];
+
+  // Transpose SoA to AoS.
+  ozz::math::SimdFloat4 translations[4];
+  ozz::math::Transpose3x4(&soa_transform.translation.x, translations);
+  ozz::math::SimdFloat4 rotations[4];
+  ozz::math::Transpose4x4(&soa_transform.rotation.x, rotations);
+  ozz::math::SimdFloat4 scales[4];
+  ozz::math::Transpose3x4(&soa_transform.scale.x, scales);
+
+  // Stores simd data to the scalar Transform object.
+  math::Transform result;
+  const int offset = _joint % 4;
+  ozz::math::Store3PtrU(translations[offset], &result.translation.x);
+  ozz::math::StorePtrU(rotations[offset], &result.rotation.x);
+  ozz::math::Store3PtrU(scales[offset], &result.scale.x);
+
+  return result;
+}
+
 // Helper macro used to detect if a joint has a brother.
-#define _HAS_BROTHER(_i, _num_joints, _properties) \
+#define _HAS_SIBLING(_i, _num_joints, _properties) \
   ((_i + 1 < _num_joints) &&\
    (_properties[_i].parent == _properties[_i + 1].parent))
 
@@ -79,7 +105,7 @@ void IterateJointsDF(const Skeleton& _skeleton,
     start.has_brother = false;  // Disallow brother processing.
   } else {  // num_joints > 0, which was tested as pre-conditions.
     start.joint = 0;
-    start.has_brother = _HAS_BROTHER(0, num_joints, properties.begin);
+    start.has_brother = _HAS_SIBLING(0, num_joints, properties.begin);
   }
   stack[stack_size++] = start;
 
@@ -101,7 +127,7 @@ void IterateJointsDF(const Skeleton& _skeleton,
       if (next_joint < num_joints) {
         const Context next = {
           next_joint,
-          _HAS_BROTHER(next_joint, num_joints, properties.begin)};
+          _HAS_SIBLING(next_joint, num_joints, properties.begin)};
         stack[stack_size++] = next;  // Push child and process it.
         continue;
       }
@@ -117,10 +143,10 @@ void IterateJointsDF(const Skeleton& _skeleton,
       assert(next.has_brother && next.joint + 1 < num_joints);
 
       ++next.joint;  // The brother is the next joint in breadth-first order.
-      next.has_brother = _HAS_BROTHER(next.joint, num_joints, properties.begin);
+      next.has_brother = _HAS_SIBLING(next.joint, num_joints, properties.begin);
     }
   }
 }
-#undef _HAS_BROTHER
+#undef _HAS_SIBLING
 }  // animation
 }  // ozz

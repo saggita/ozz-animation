@@ -38,11 +38,9 @@
 
 #include "ozz/base/log.h"
 
-#include "ozz/base/maths/soa_transform.h"
-
 #include "ozz/animation/offline/raw_animation.h"
-
 #include "ozz/animation/runtime/skeleton.h"
+#include "ozz/animation/runtime/skeleton_utils.h"
 
 #include "animation/offline/collada/collada_skeleton.h"
 
@@ -1152,23 +1150,10 @@ bool ExtractAnimation(const AnimationVisitor& _animation_visitor,
       ozz::log::Err() << "No animation track found for joint \"" <<
         _skeleton.joint_names()[i] << "\". Using skeleton bind-pose instead" <<
         std::endl;
-
-      // Get soa bind pose3
-      const ozz::math::SoaTransform& soa_transform = _skeleton.bind_pose()[i / 4];
-
-      // Build aos bind pose3
-      ozz::math::SimdFloat4 translations[4];
-      ozz::math::SimdFloat4 rotations[4];
-      ozz::math::SimdFloat4 scales[4];
-
-      ozz::math::Transpose3x4(&soa_transform.translation.x, translations);
-      ozz::math::Transpose4x4(&soa_transform.rotation.x, rotations);
-      ozz::math::Transpose3x4(&soa_transform.scale.x, scales);
-
-      math::Transform bind_pose;
-      ozz::math::Store3PtrU(translations[i % 4], &bind_pose.translation.x);
-      ozz::math::StorePtrU(rotations[i % 4], &bind_pose.rotation.x);
-      ozz::math::Store3PtrU(scales[i % 4], &bind_pose.scale.x);
+      
+      // Get joint's bind pose.
+      const ozz::math::Transform& bind_pose =
+        ozz::animation::GetJointBindPose(_skeleton, i);
 
       PushKeys(bind_pose, 0.f, &output_track);
     } else {  // Uses animated transformations.

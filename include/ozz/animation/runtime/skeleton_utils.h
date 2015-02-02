@@ -33,10 +33,12 @@
 
 #include "skeleton.h"
 
+#include "ozz/base/maths/transform.h"
+
 namespace ozz {
 namespace animation {
 
-// Get bind-pose of a skeleton joints.
+// Get bind-pose of a skeleton joint.
 ozz::math::Transform GetJointBindPose(const Skeleton& _skeleton, int _joint);
 
 // Defines the iterator structure used by IterateJointsDF to traverse joint

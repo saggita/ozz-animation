@@ -78,7 +78,7 @@ TEST(JointBindPose, SkeletonUtils) {
   EXPECT_EQ(skeleton->num_joints(), 3);
 
   // Out of range.
-  EXPECT_ASSERTION(GetJointBindPose(*skeleton, 3), "Joint index out of range");
+  EXPECT_ASSERTION(GetJointBindPose(*skeleton, 3), "Joint index out of range.");
   
   const ozz::math::Transform bind_pose0 =
     ozz::animation::GetJointBindPose(*skeleton, 0);

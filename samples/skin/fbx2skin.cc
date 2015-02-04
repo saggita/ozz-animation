@@ -110,7 +110,6 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
   _output_mesh->triangle_indices.resize(vertex_count);
 
   // Iterate all polygons and stores ctrl point to polygon mappings.
-  float ccw_multiplier = _fbx_mesh->CheckIfVertexNormalsCCW() ? 1.f : -1.f;
   const int polygon_count = _fbx_mesh->GetPolygonCount();
   for (int p = 0; p < polygon_count; ++p) {
     assert(_fbx_mesh->GetPolygonSize(p) == 3 &&
@@ -130,7 +129,7 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
       FbxVector4 src_normal;
       _fbx_mesh->GetPolygonVertexNormal(p, v, src_normal);
       const ozz::math::Float3 normal = Normalize(
-        _converter->ConvertNormal(src_normal * ccw_multiplier));
+        _converter->ConvertNormal(src_normal));
 
       // Check for vertex redundancy, only with other points that share the same
       // control point.

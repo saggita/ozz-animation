@@ -109,17 +109,24 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     // Updates current animation time.
     controller_.Update(*animation_opt_, _dt);
 
-    // Samples optimized animation at t = animation_time_.
+    // Prepares sampling job.
+    // The same job will be reused for optimized and non-optimized animations,
+    // leading to a poor perfomance of sampling job cache. It's completly
+    // functional though and ok for the sample.
     ozz::animation::SamplingJob sampling_job;
-    sampling_job.animation = animation_opt_;
     sampling_job.cache = cache_;
     sampling_job.time = controller_.time();
-    sampling_job.output = locals_opt_;
-    if (!sampling_job.Run()) {
-      return false;
+    
+    // Samples optimized animation (_according to the display mode).
+    if (selected_display_ != eNonOptimized) {
+      sampling_job.animation = animation_opt_;
+      sampling_job.output = locals_opt_;
+      if (!sampling_job.Run()) {
+        return false;
+      }
     }
 
-    // Also samples non-optimized animation according to the display mode.
+    // Also samples non-optimized animation (according to the display mode).
     if (selected_display_ != eOptimized) {
       // Shares the cache even if it's not optimal.
       sampling_job.animation = animation_non_opt_;
@@ -140,8 +147,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
       for (;
            locals < locals_scratch_.end;
            ++locals, ++locals_opt, ++bind_pose) {
-        assert(locals_opt < locals_opt_.end &&
-               bind_pose < bind_poses.end);
+        assert(locals_opt < locals_opt_.end && bind_pose < bind_poses.end);
 
         // Computes difference.
         const ozz::math::SoaTransform diff = {

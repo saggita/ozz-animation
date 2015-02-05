@@ -419,7 +419,7 @@ namespace {
     "  vec4 bt = lerp(\n"
     "    alpha.xzxz, vec4(.3, .3, .7, .7), vec4(.4, .4, .8, .8));\n"
     "  gl_FragColor = vec4(\n"
-    "     lerp(alpha.yyy, vec3(bt.x, .3, bt.y), vec3(bt.z, .8, bt.w)), 1.);\n"
+    "     lerp(alpha.yyy, vec3(bt.x, .2, bt.y), vec3(bt.z, .8, bt.w)), 1.);\n"
     "  gl_FragColor *= v_vertex_color;\n"
     "}\n";
 }

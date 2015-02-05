@@ -98,6 +98,7 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
 
   // Computes worst vertex count case. Needs to allocate 3 vertices per polygon,
   // as they should all be triangles.
+  const int polygon_count = _fbx_mesh->GetPolygonCount();
   int vertex_count = _fbx_mesh->GetPolygonCount() * 3;
 
   // Reserve vertex buffers. Real size is unknown as redundant vertices will be
@@ -110,7 +111,6 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
   _output_mesh->triangle_indices.resize(vertex_count);
 
   // Iterate all polygons and stores ctrl point to polygon mappings.
-  const int polygon_count = _fbx_mesh->GetPolygonCount();
   for (int p = 0; p < polygon_count; ++p) {
     assert(_fbx_mesh->GetPolygonSize(p) == 3 &&
            "Mesh must have been triangulated.");
@@ -126,10 +126,10 @@ bool BuildVertices(FbxMesh* _fbx_mesh,
         _converter->ConvertPoint(_fbx_mesh->GetControlPoints()[ctrl_point]);
 
       // Get vertex normal.
-      FbxVector4 src_normal;
+      FbxVector4 src_normal(0.f, 1.f, 0.f, 0.f);
       _fbx_mesh->GetPolygonVertexNormal(p, v, src_normal);
-      const ozz::math::Float3 normal = Normalize(
-        _converter->ConvertNormal(src_normal));
+      const ozz::math::Float3 normal = NormalizeSafe(
+        _converter->ConvertNormal(src_normal), ozz::math::Float3::y_axis());
 
       // Check for vertex redundancy, only with other points that share the same
       // control point.

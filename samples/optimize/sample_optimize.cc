@@ -98,6 +98,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
  public:
   OptimizeSampleApplication()
     : selected_display_(eOptimized),
+      optimize_(true),
       cache_(NULL),
       animation_opt_(NULL),
       animation_non_opt_(NULL) {
@@ -110,9 +111,6 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     controller_.Update(*animation_opt_, _dt);
 
     // Prepares sampling job.
-    // The same job will be reused for optimized and non-optimized animations,
-    // leading to a poor perfomance of sampling job cache. It's completly
-    // functional though and ok for the sample.
     ozz::animation::SamplingJob sampling_job;
     sampling_job.cache = cache_;
     sampling_job.time = controller_.time();
@@ -153,7 +151,8 @@ class OptimizeSampleApplication : public ozz::sample::Application {
         const ozz::math::SoaTransform diff = {
           locals_opt->translation - locals->translation,
           locals_opt->rotation * Conjugate(locals->rotation),
-          locals_opt->scale / locals->scale};
+          locals_opt->scale / locals->scale
+        };
 
         // Rebinds to the bind pose in the scratch buffer.
         locals->translation = bind_pose->translation + diff.translation;
@@ -232,11 +231,13 @@ class OptimizeSampleApplication : public ozz::sample::Application {
         bool rebuild = false;
         char label[64];
 
+        rebuild |= _im_gui->DoCheckBox("Enable optimzations", &optimize_);
+
         std::sprintf(label,
                      "Translation : %0.2f cm",
                      optimizer_.translation_tolerance * 100);
         rebuild |= _im_gui->DoSlider(
-          label, 0.f, .1f, &optimizer_.translation_tolerance, .5f);
+          label, 0.f, .1f, &optimizer_.translation_tolerance, .5f, optimize_);
 
         std::sprintf(label,
                      "Rotation : %0.2f degree",
@@ -244,12 +245,12 @@ class OptimizeSampleApplication : public ozz::sample::Application {
 
         rebuild |= _im_gui->DoSlider(
           label, 0.f, 10.f * ozz::math::kPi / 180.f,
-          &optimizer_.rotation_tolerance, .5f);
+          &optimizer_.rotation_tolerance, .5f, optimize_);
 
         std::sprintf(label,
                      "Scale : %0.2f %%", optimizer_.scale_tolerance * 100.f);
         rebuild |= _im_gui->DoSlider(
-          label, 0.f, .1f, &optimizer_.scale_tolerance, .5f);
+          label, 0.f, .1f, &optimizer_.scale_tolerance, .5f, optimize_);
 
         std::sprintf(label, "Animation size : %dKB",
           static_cast<int>(animation_opt_->size()>>10));
@@ -299,26 +300,36 @@ class OptimizeSampleApplication : public ozz::sample::Application {
   bool BuildAnimations() {
     assert(!animation_opt_);
 
-    // Optimzes the raw animation.
-    ozz::animation::offline::RawAnimation optimized_animation;
-    if (!optimizer_(raw_animation_, &optimized_animation)) {
-      return false;
-    }
-
-    // Builds the runtime animation from the offline one.
+    // Instantiate an aniation builder.
     ozz::animation::offline::AnimationBuilder animation_builder;
-    animation_opt_ = animation_builder(optimized_animation);
-    if (!animation_opt_) {
-      return false;
-    }
 
-    // Builds the non-optimized animation if it's the first call.
+    // Builds the non-optimized animation (if it's the first call).
     if (!animation_non_opt_) {
       animation_non_opt_ = animation_builder(raw_animation_);
       if (!animation_non_opt_) {
         return false;
       }
     }
+
+    // Builds the optimized animation.
+    if (optimize_) {
+      // Optimzes the raw animation.
+      ozz::animation::offline::RawAnimation optimized_animation;
+      if (!optimizer_(raw_animation_, &optimized_animation)) {
+        return false;
+      }
+      // Builds runtime aniamtion from the optimized one.
+      animation_opt_ = animation_builder(optimized_animation);
+    } else {
+      // Builds runtime aniamtion from the brut one.
+      animation_opt_ = animation_builder(raw_animation_);
+    }
+
+    // Check if building runtime animation was successful.
+    if (!animation_opt_) {
+      return false;
+    }
+
     return true;
   }
 
@@ -335,6 +346,9 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     eDifference,
   };
   int selected_display_;
+
+  // Select whether optimization should be perfomed.
+  bool optimize_;
 
   // Imported non-optimized animation.
   ozz::animation::offline::RawAnimation raw_animation_;

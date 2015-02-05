@@ -73,7 +73,7 @@ struct RotationKey {
   float time;
   uint16_t track:15;
   bool wsign:1;
-  int16_t value[3];  
+  int16_t value[3];
 };
 
 // Defines the scale key frame type.

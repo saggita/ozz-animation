@@ -1,6 +1,8 @@
 Release version 0.7.2.----------------------------------------------------------
 
  # Library
+  - [animation] Improves rotations precision during animation sampling and
+  blending, using a more accurate quaternion normalization function.
   - [offline] Fixes fbx animation duration when take duration is different to
   timeline length.
   - [offline] Bakes fbx axis/unit systems to all transformations, vertices,

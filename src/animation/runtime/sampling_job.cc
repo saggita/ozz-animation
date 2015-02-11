@@ -211,7 +211,7 @@ void UpdateSoaRotations(int _num_soa_tracks,
         continue;
       }
 
-      const int base = i * 4 * 2;  // * soa size * 2 keys
+      const int base = i * 4 * 2;  // * soa size * 2 keys per track
 
       // Decompress left side keyframes and store them in soa structures.
       const RotationKey& k00 = _keys.begin[_interp[base + 0]];

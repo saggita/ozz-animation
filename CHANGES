@@ -1,8 +1,9 @@
 Release version 0.7.2.----------------------------------------------------------
 
  # Library
-  - [animation] Improves rotations precision during animation sampling and
-  blending, using a more accurate quaternion normalization function.
+  - [animation] Improves rotations accuracy during animation sampling and
+  blending. Quaternion normalization now uses one more Newton-Raphson step when
+  computing inverse square root.
   - [offline] Fixes fbx animation duration when take duration is different to
   timeline length.
   - [offline] Bakes fbx axis/unit systems to all transformations, vertices,
@@ -11,10 +12,10 @@ Release version 0.7.2.----------------------------------------------------------
   meshes imported from any axis/unit system.
   - [offline][issue 6] Uses bind-pose transformation, instead of identity, for
   skeleton joints that are not animated in a fbx file.
-  - [offline] Adds support to ozz fbx tools (fbx2skel and fbx2anim) for Autodesk
-  AutoCAD DXF (.dxf), Collada DAE (.dae), 3D Studio 3DS (.3ds) and Alias OBJ
-  (.obj). This toolchain based on fbx sdk will replace dae toolchain (dae2skel
-  and dae2anim) which is now deprecated.
+  - [offline] Adds support to ozz fbx tools (fbx2skel and fbx2anim) for other
+  formats: Autodesk AutoCAD DXF (.dxf), Collada DAE (.dae), 3D Studio 3DS (.3ds)
+  and Alias OBJ (.obj). This toolchain based on fbx sdk will replace dae
+  toolchain (dae2skel and dae2anim) which is now deprecated.
 
  # HowTos
   - Adds file loading how-to, which demonstrates how to open a file and
@@ -30,7 +31,7 @@ Release version 0.7.2.----------------------------------------------------------
   more robust solution, which furthermore allow to share the skeleton with
   meshes using different bind-poses.
   - [skin] Fixes joints weight normalization when importing fbx skin meshes.
-  - [framework] Optimizes vertex buffer object re-allocation strategy.
+  - [framework] Optimizes dynamic vertex buffer object re-allocation strategy.
 
 Release version 0.7.1.----------------------------------------------------------
 

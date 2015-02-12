@@ -16,6 +16,8 @@ Release version 0.7.2.----------------------------------------------------------
   formats: Autodesk AutoCAD DXF (.dxf), Collada DAE (.dae), 3D Studio 3DS (.3ds)
   and Alias OBJ (.obj). This toolchain based on fbx sdk will replace dae
   toolchain (dae2skel and dae2anim) which is now deprecated.
+  - [offline] Adds a command line option to dae2anim and fbx2anim to enable or
+  disable keyframes optimization. Optimizations are enabled by default.
 
  # HowTos
   - Adds file loading how-to, which demonstrates how to open a file and

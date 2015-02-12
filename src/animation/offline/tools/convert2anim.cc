@@ -54,6 +54,10 @@ OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies ozz skeleton (raw or runtime) input file", "", true)
 OZZ_OPTIONS_DECLARE_STRING(animation, "Specifies ozz animation output file", "", true)
 
+OZZ_OPTIONS_DECLARE_BOOL(
+  optimize,
+  "Activate keyframe optimization stage.", true, false)
+
 OZZ_OPTIONS_DECLARE_FLOAT(
   rotation,
   "Optimizer rotation tolerance in degrees",
@@ -252,27 +256,32 @@ int AnimationConverter::operator()(int _argc, const char** _argv) {
     return EXIT_FAILURE;
   }
 
-  // Optimizes animation.
-  ozz::log::Log() << "Optimizing animation." << std::endl;
-  ozz::animation::offline::AnimationOptimizer optimizer;
-  optimizer.rotation_tolerance = OPTIONS_rotation;
-  optimizer.translation_tolerance = OPTIONS_translation;
-  optimizer.scale_tolerance = OPTIONS_scale;
-  ozz::animation::offline::RawAnimation raw_optimized_animation;
-  if (!optimizer(raw_animation, &raw_optimized_animation)) {
-    ozz::log::Err() << "Failed to optimize animation." << std::endl;
-    return EXIT_FAILURE;
-  }
+  // Optimizes animation if option is enabled.
+  if (OPTIONS_optimize) {
+    ozz::log::Log() << "Optimizing animation." << std::endl;
+    ozz::animation::offline::AnimationOptimizer optimizer;
+    optimizer.rotation_tolerance = OPTIONS_rotation;
+    optimizer.translation_tolerance = OPTIONS_translation;
+    optimizer.scale_tolerance = OPTIONS_scale;
+    ozz::animation::offline::RawAnimation raw_optimized_animation;
+    if (!optimizer(raw_animation, &raw_optimized_animation)) {
+      ozz::log::Err() << "Failed to optimize animation." << std::endl;
+      return EXIT_FAILURE;
+    }
 
-  // Displays optimization statistics.
-  DisplaysOptimizationstatistics(raw_animation, raw_optimized_animation);
+    // Displays optimization statistics.
+    DisplaysOptimizationstatistics(raw_animation, raw_optimized_animation);
+
+    // Brings data back to the raw animation.
+    raw_animation = raw_optimized_animation;
+  }
 
   // Builds runtime animation.
   ozz::animation::Animation* animation = NULL;
   if (!OPTIONS_raw) {
     ozz::log::Log() << "Builds runtime animation." << std::endl;
     ozz::animation::offline::AnimationBuilder builder;
-    animation = builder(raw_optimized_animation);
+    animation = builder(raw_animation);
     if (!animation) {
       ozz::log::Err() << "Failed to build runtime animation." << std::endl;
       return EXIT_FAILURE;
@@ -310,7 +319,7 @@ int AnimationConverter::operator()(int _argc, const char** _argv) {
     // Fills output archive with the animation.
     if (OPTIONS_raw) {
       ozz::log::Log() << "Outputs RawAnimation to binary archive." << std::endl;
-      archive << raw_optimized_animation;
+      archive << raw_animation;
     } else {
       ozz::log::Log() << "Outputs Animation to binary archive." << std::endl;
       archive << *animation;      

@@ -15,9 +15,7 @@ add_custom_command(
     "--skeleton=${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
   COMMAND dae2anim
     "--raw"
-    "--translation=0"
-    "--rotation=0"
-    "--scale=0"
+    "--nooptimize"
     "--file=${ozz_media_directory}/collada/alain/atlas.dae"
     "--skeleton=${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
     "--animation=${CMAKE_CURRENT_BINARY_DIR}/media/raw_animation.ozz")

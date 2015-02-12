@@ -111,6 +111,8 @@ add_test(NAME test2anim_bad_log_level COMMAND test2anim "--file=${ozz_temp_direc
 set_tests_properties(test2anim_bad_log_level PROPERTIES WILL_FAIL true DEPENDS test2skel_simple)
 add_test(NAME test2anim_bad_log_level_raw COMMAND test2anim "--raw" "--file=${ozz_temp_directory}/good.content" "--skeleton=${ozz_temp_directory}/raw_skeleton.ozz" "--animation=${ozz_temp_directory}/should_not_exist.ozz" "--log_level=no_log")
 set_tests_properties(test2anim_bad_log_level_raw PROPERTIES WILL_FAIL true DEPENDS test2skel_simple_raw)
+add_test(NAME test2anim_wrongoptimize COMMAND test2anim "--file=${ozz_temp_directory}/good.content" "--skeleton=${ozz_temp_directory}/skeleton.ozz" "--animation=${ozz_temp_directory}/animation.ozz" --optimize=99)
+set_tests_properties(test2anim_wrongoptimize PROPERTIES WILL_FAIL true DEPENDS test2skel_simple)
 
 # Ensures nothing was outputted. Unfortunately there's no way to ensure this test is ran last
 add_test(NAME test2anim_ouput COMMAND ${CMAKE_COMMAND} -E copy "${ozz_temp_directory}/should_not_exist.ozz" "${ozz_temp_directory}/should_not_exist_too.ozz")
@@ -119,6 +121,10 @@ set_tests_properties(test2anim_ouput PROPERTIES WILL_FAIL true)
 # Run test2anim passing tests
 add_test(NAME test2anim_simple COMMAND test2anim "--file=${ozz_temp_directory}/good.content" "--skeleton=${ozz_temp_directory}/skeleton.ozz" "--animation=${ozz_temp_directory}/animation.ozz")
 set_tests_properties(test2anim_simple PROPERTIES DEPENDS test2skel_simple)
+add_test(NAME test2anim_optimize COMMAND test2anim "--file=${ozz_temp_directory}/good.content" "--skeleton=${ozz_temp_directory}/skeleton.ozz" "--animation=${ozz_temp_directory}/animation.ozz" --optimize)
+set_tests_properties(test2anim_optimize PROPERTIES DEPENDS test2skel_simple)
+add_test(NAME test2anim_nooptimize COMMAND test2anim "--file=${ozz_temp_directory}/good.content" "--skeleton=${ozz_temp_directory}/skeleton.ozz" "--animation=${ozz_temp_directory}/animation.ozz" --nooptimize)
+set_tests_properties(test2anim_nooptimize PROPERTIES DEPENDS test2skel_simple)
 add_test(NAME test2anim_simple_raw COMMAND test2anim "--raw" "--file=${ozz_temp_directory}/good.content" "--skeleton=${ozz_temp_directory}/skeleton.ozz" "--animation=${ozz_temp_directory}/raw_animation.ozz")
 add_test(NAME test2anim_simple_from_raw COMMAND test2anim "--file=${ozz_temp_directory}/good.content" "--skeleton=${ozz_temp_directory}/raw_skeleton.ozz" "--animation=${ozz_temp_directory}/animation.ozz")
 add_test(NAME test2anim_simple_raw_from_raw COMMAND test2anim "--raw" "--file=${ozz_temp_directory}/good.content" "--skeleton=${ozz_temp_directory}/raw_skeleton.ozz" "--animation=${ozz_temp_directory}/raw_animation.ozz")

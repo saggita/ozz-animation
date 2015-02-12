@@ -56,7 +56,7 @@ OZZ_OPTIONS_DECLARE_STRING(animation, "Specifies ozz animation output file", "",
 
 OZZ_OPTIONS_DECLARE_BOOL(
   optimize,
-  "Activate keyframe optimization stage.", true, false)
+  "Activate keyframes optimization stage.", true, false)
 
 OZZ_OPTIONS_DECLARE_FLOAT(
   rotation,

@@ -126,6 +126,9 @@ class OptimizeSampleApplication : public ozz::sample::Application {
 
     // Also samples non-optimized animation (according to the display mode).
     if (selected_display_ != eOptimized) {
+      /*if (!SampleRawAnimation(raw_animation_, controller_.time(), locals_scratch_)) {
+        return false;
+      }*/
       // Shares the cache even if it's not optimal.
       sampling_job.animation = animation_non_opt_;
       sampling_job.output = locals_scratch_;
@@ -169,6 +172,70 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     ltm_job.output = models_;
     if (!ltm_job.Run()) {
       return false;
+    }
+
+    return true;
+  }
+
+  bool SampleRawAnimation(
+    const ozz::animation::offline::RawAnimation& _animation,
+    float _time,
+    ozz::Range<ozz::math::SoaTransform> _locals) {
+
+    // Ensure output is big enough.
+    if (_locals.Count() * 4 < _animation.num_tracks()) {
+      return false;
+    }
+
+    ozz::math::SimdFloat4 translations[4];
+    ozz::math::SimdFloat4 rotations[4];
+    ozz::math::SimdFloat4 scales[4];
+
+    for (int i = 0; i < _animation.num_tracks(); i += 4) {
+      const int jmax = ozz::math::Min(_animation.num_tracks() - i, 4);
+      for (int j = 0; j < jmax; ++j) {
+        const ozz::animation::offline::RawAnimation::JointTrack track =
+          _animation.tracks[i + j];
+
+        // Finds translation.
+        translations[j] = ozz::math::simd_float4::zero();
+        for (size_t k = 0; k < track.translations.size(); ++k) {
+          const ozz::animation::offline::RawAnimation::TranslationKey key =
+            track.translations[k];
+          if (key.time >= _time) {
+            translations[j] = ozz::math::simd_float4::Load3PtrU(&key.value.x);
+            break;
+          }
+        }
+
+        // Finds rotation.
+        rotations[j] = ozz::math::simd_float4::w_axis();
+        for (int k = 0; k < track.rotations.size(); ++k) {
+          const ozz::animation::offline::RawAnimation::RotationKey key =
+            track.rotations[k];
+          if (key.time >= _time) {
+            rotations[j] = ozz::math::simd_float4::LoadPtrU(&key.value.x);
+            break;
+          }
+        }
+
+        // Finds scale.
+        scales[j] = ozz::math::simd_float4::one();
+        for (int k = 0; k < track.scales.size(); ++k) {
+          const ozz::animation::offline::RawAnimation::ScaleKey key =
+            track.scales[k];
+          if (key.time >= _time) {
+            scales[j] = ozz::math::simd_float4::Load3PtrU(&key.value.x);
+            break;
+          }
+        }
+      }
+
+      // Stores AoS keyframes to the SoA output.
+      ozz::math::SoaTransform& output = _locals[i/4];
+      ozz::math::Transpose4x3(translations, &output.translation.x);
+      ozz::math::Transpose4x4(rotations, &output.rotation.x);
+      ozz::math::Transpose4x3(scales, &output.scale.x);
     }
 
     return true;

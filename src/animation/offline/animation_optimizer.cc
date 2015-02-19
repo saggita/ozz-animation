@@ -90,8 +90,8 @@ void Filter(const _RawTrack& _src,
 
 // Translation filtering comparator.
 bool CompareTranslation(const math::Float3& _a,
-                   const math::Float3& _b,
-                   float _tolerance) {
+                        const math::Float3& _b,
+                        float _tolerance) {
   return Compare(_a, _b, _tolerance);
 }
 
@@ -115,6 +115,10 @@ bool CompareRotation(const math::Quaternion& _a,
 math::Quaternion LerpRotation(const math::Quaternion& _a,
                               const math::Quaternion& _b,
                               float _alpha) {
+  const float dot = _a.x * _b.x + _a.y * _b.y + _a.z * _b.z + _a.w * _b.w;
+  if (dot < 0.f) {
+    return math::NLerp(_a, -_b, _alpha);  // Q an -Q are the same rotation.
+  }
   return math::NLerp(_a, _b, _alpha);
 }
 

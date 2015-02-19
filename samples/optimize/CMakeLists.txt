@@ -13,10 +13,10 @@ add_custom_command(
   COMMAND dae2skel
     "--file=${ozz_media_directory}/collada/alain/skeleton.dae"
     "--skeleton=${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
-  COMMAND dae2anim
+  COMMAND fbx2anim
     "--raw"
     "--nooptimize"
-    "--file=${ozz_media_directory}/collada/alain/atlas.dae"
+    "--file=${ozz_media_directory}/fbx/alain/atlas.fbx"
     "--skeleton=${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
     "--animation=${CMAKE_CURRENT_BINARY_DIR}/media/raw_animation.ozz")
 

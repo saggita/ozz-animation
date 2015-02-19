@@ -2,6 +2,8 @@ add_library(ozz_animation_offline
   ${CMAKE_SOURCE_DIR}/include/ozz/animation/offline/raw_animation.h
   raw_animation.cc
   raw_animation_archive.cc
+  ${CMAKE_SOURCE_DIR}/include/ozz/animation/offline/raw_animation_utils.h
+  raw_animation_utils.cc
   ${CMAKE_SOURCE_DIR}/include/ozz/animation/offline/animation_builder.h
   animation_builder.cc
   ${CMAKE_SOURCE_DIR}/include/ozz/animation/offline/animation_optimizer.h

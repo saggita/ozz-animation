@@ -73,8 +73,12 @@ struct RawAnimation {
 
   // Defines a raw translation key frame.
   struct TranslationKey {
+    // Key frame time.
     float time;
-    math::Float3 value;
+
+    // Key frame value.
+    typedef math::Float3 Value;
+    Value value;
 
     // Provides identity transformation for a translation key.
     static math::Float3 identity() {
@@ -84,7 +88,11 @@ struct RawAnimation {
 
   // Defines a raw rotation key frame.
   struct RotationKey {
+    // Key frame time.
     float time;
+
+    // Key frame value.
+    typedef math::Quaternion Value;
     math::Quaternion value;
 
     // Provides identity transformation for a rotation key.
@@ -95,7 +103,11 @@ struct RawAnimation {
 
   // Defines a raw scaling key frame.
   struct ScaleKey {
+    // Key frame time.
     float time;
+
+    // Key frame value.
+    typedef math::Float3 Value;
     math::Float3 value;
 
     // Provides identity transformation for a scale key.

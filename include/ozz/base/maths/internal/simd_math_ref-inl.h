@@ -864,7 +864,7 @@ OZZ_INLINE SimdFloat4 And(_SimdFloat4 _a, _SimdFloat4 _b) {
   const SimdFI4 a = {_a};
   const SimdFI4 b = {_b};
   const SimdIF4 ret = {{
-    a.i.x & _b.i.x, a.i.y & _b.i.y, a.i.z & _b.i.z, a.i.w & _b.i.w}};
+    a.i.x & b.i.x, a.i.y & b.i.y, a.i.z & b.i.z, a.i.w & b.i.w}};
   return ret.f;
 }
 
@@ -875,7 +875,7 @@ OZZ_INLINE SimdFloat4 Or(_SimdFloat4 _a, _SimdFloat4 _b) {
   const SimdFI4 a = {_a};
   const SimdFI4 b = {_b};
   const SimdIF4 ret = {{
-    a.i.x | _b.i.x, a.i.y | _b.i.y, a.i.z | _b.i.z, a.i.w | _b.i.w}};
+    a.i.x | b.i.x, a.i.y | b.i.y, a.i.z | b.i.z, a.i.w | b.i.w}};
   return ret.f;
 }
 
@@ -886,7 +886,7 @@ OZZ_INLINE SimdFloat4 Xor(_SimdFloat4 _a, _SimdFloat4 _b) {
   const SimdFI4 a = {_a};
   const SimdFI4 b = {_b};
   const SimdIF4 ret = {{
-    a.i.x ^ _b.i.x, a.i.y ^ _b.i.y, a.i.z ^ _b.i.z, a.i.w ^ _b.i.w}};
+    a.i.x ^ b.i.x, a.i.y ^ b.i.y, a.i.z ^ b.i.z, a.i.w ^ b.i.w}};
   return ret.f;
 }
 

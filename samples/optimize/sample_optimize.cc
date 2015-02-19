@@ -44,12 +44,14 @@
 #include "ozz/base/io/stream.h"
 #include "ozz/base/log.h"
 
+#include "ozz/base/maths/math_ex.h"
 #include "ozz/base/maths/vec_float.h"
 #include "ozz/base/maths/simd_math.h"
 #include "ozz/base/maths/soa_transform.h"
 
 #include "ozz/options/options.h"
 
+#include "framework/profile.h"
 #include "framework/application.h"
 #include "framework/renderer.h"
 #include "framework/imgui.h"
@@ -97,76 +99,109 @@ bool LoadAnimation(const char* _filename,
 class OptimizeSampleApplication : public ozz::sample::Application {
  public:
   OptimizeSampleApplication()
-    : selected_display_(eOptimized),
+    : selected_display_(eRuntimeAnimation),
       optimize_(true),
       cache_(NULL),
-      animation_opt_(NULL),
-      animation_non_opt_(NULL) {
+      animation_rt_(NULL),
+      error_record_(64) {
   }
 
  protected:
   // Updates current animation time.
   virtual bool OnUpdate(float _dt) {
     // Updates current animation time.
-    controller_.Update(*animation_opt_, _dt);
+    controller_.Update(*animation_rt_, _dt);
 
     // Prepares sampling job.
     ozz::animation::SamplingJob sampling_job;
     sampling_job.cache = cache_;
     sampling_job.time = controller_.time();
-    
+
     // Samples optimized animation (_according to the display mode).
-    if (selected_display_ != eNonOptimized) {
-      sampling_job.animation = animation_opt_;
-      sampling_job.output = locals_opt_;
-      if (!sampling_job.Run()) {
-        return false;
-      }
+    sampling_job.animation = animation_rt_;
+    sampling_job.output = locals_rt_;
+    if (!sampling_job.Run()) {
+      return false;
     }
 
-    // Also samples non-optimized animation (according to the display mode).
-    if (selected_display_ != eOptimized) {
-      if (!SampleRawAnimation(raw_animation_, controller_.time(), locals_scratch_)) {
-        return false;
-      }
+    // Also samples non-optimized animation, from the raw animation.
+    if (!SampleRawAnimation(raw_animation_, controller_.time(), locals_raw_)) {
+      return false;
     }
 
     // Computes difference between the optimized and non-optimized animations
     // in local space, and rebinds it to the bind pose.
-    if (selected_display_ == eDifference) {
-      ozz::math::SoaTransform* locals = locals_scratch_.begin;
-      const ozz::math::SoaTransform* locals_opt = locals_opt_.begin;
+    {
+      const ozz::math::SoaTransform* locals_raw = locals_raw_.begin;
+      const ozz::math::SoaTransform* locals_rt = locals_rt_.begin;
+      ozz::math::SoaTransform* locals_diff = locals_diff_.begin;
       ozz::Range<const ozz::math::SoaTransform> bind_poses =
         skeleton_.bind_pose();
       const ozz::math::SoaTransform* bind_pose = bind_poses.begin;
       for (;
-           locals < locals_scratch_.end;
-           ++locals, ++locals_opt, ++bind_pose) {
-        assert(locals_opt < locals_opt_.end && bind_pose < bind_poses.end);
+           bind_pose < bind_poses.end;
+           ++locals_raw, ++locals_rt, ++locals_diff, ++bind_pose) {
+        assert(locals_raw < locals_raw_.end &&
+               locals_rt < locals_rt_.end &&
+               locals_diff < locals_diff_.end &&
+               bind_pose < bind_poses.end);
 
         // Computes difference.
         const ozz::math::SoaTransform diff = {
-          locals_opt->translation - locals->translation,
-          locals_opt->rotation * Conjugate(locals->rotation),
-          locals_opt->scale / locals->scale
+          locals_rt->translation - locals_raw->translation,
+          locals_rt->rotation * Conjugate(locals_raw->rotation),
+          locals_rt->scale / locals_raw->scale
         };
 
-        // Rebinds to the bind pose in the scratch buffer.
-        locals->translation = bind_pose->translation + diff.translation;
-        locals->rotation = bind_pose->rotation * diff.rotation;
-        locals->scale = bind_pose->scale * diff.scale;
+        // Rebinds to the bind pose in the diff buffer.
+        locals_diff->translation = bind_pose->translation + diff.translation;
+        locals_diff->rotation = bind_pose->rotation * diff.rotation;
+        locals_diff->scale = bind_pose->scale * diff.scale;
       }
     }
 
     // Converts from local space to model space matrices.
     ozz::animation::LocalToModelJob ltm_job;
     ltm_job.skeleton = &skeleton_;
-    ltm_job.input =
-      selected_display_ == eOptimized ? locals_opt_ : locals_scratch_;
-    ltm_job.output = models_;
+
+    // Optimized samples.
+    ltm_job.input = locals_rt_;
+    ltm_job.output = models_rt_;
     if (!ltm_job.Run()) {
       return false;
     }
+
+    // Non-optimized samples (from the raw animation).
+    ltm_job.input = locals_raw_;
+    ltm_job.output = models_raw_;
+    if (!ltm_job.Run()) {
+      return false;
+    }
+
+    // Difference between optimized and non-optimized samples.
+    ltm_job.input = locals_diff_;
+    ltm_job.output = models_diff_;
+    if (!ltm_job.Run()) {
+      return false;
+    }
+
+    // Computes the absolute error, aka the difference between the raw and
+    // runtime model space transformation.
+    float error = 0.f;
+    const ozz::math::Float4x4* models_rt = models_rt_.begin;
+    const ozz::math::Float4x4* models_raw = models_raw_.begin;
+    for (;
+         models_rt < models_rt_.end;
+         ++models_rt, ++models_raw) {
+
+      // Computes the difference 
+      const ozz::math::SimdFloat4 diff =
+        models_rt->cols[3] - models_raw->cols[3];
+
+      // Stores maximum error.
+      error = ozz::math::Max(error, ozz::math::GetX(ozz::math::Length3(diff)));
+    }
+    error_record_.Push(error * 1000.f);  // Error is in millimeters.
 
     return true;
   }
@@ -215,10 +250,26 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     return true;
   }
 
+
+  // Selects model space matrices according to the display mode.
+  ozz::Range<const ozz::math::Float4x4> models() const {
+    switch(selected_display_) {
+      case eRuntimeAnimation: return models_rt_;
+      case eRawAnimation: return models_raw_;
+      case eAbsoluteError: return models_diff_;
+      default: {
+        assert(false && "Invalid display mode");
+        return models_rt_;
+      }
+    }
+  }
+
   // Samples animation, transforms to model space and renders.
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
+
+    // Renders posture.
     return _renderer->
-      DrawPosture(skeleton_, models_, ozz::math::Float4x4::identity());
+      DrawPosture(skeleton_, models(), ozz::math::Float4x4::identity());
   }
 
   virtual bool OnInitialize() {
@@ -242,11 +293,15 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     const int num_joints = skeleton_.num_joints();
     const int num_soa_joints = skeleton_.num_soa_joints();
 
-    locals_opt_ =
+    locals_rt_ =
       allocator->AllocateRange<ozz::math::SoaTransform>(num_soa_joints);
-    locals_scratch_ =
+    models_rt_ = allocator->AllocateRange<ozz::math::Float4x4>(num_joints);
+    locals_raw_ =
       allocator->AllocateRange<ozz::math::SoaTransform>(num_soa_joints);
-    models_ = allocator->AllocateRange<ozz::math::Float4x4>(num_joints);
+    models_raw_ = allocator->AllocateRange<ozz::math::Float4x4>(num_joints);
+    locals_diff_ =
+      allocator->AllocateRange<ozz::math::SoaTransform>(num_soa_joints);
+    models_diff_ = allocator->AllocateRange<ozz::math::Float4x4>(num_joints);
 
     // Allocates a cache that matches animation requirements.
     cache_ = allocator->New<ozz::animation::SamplingCache>(num_joints);
@@ -260,7 +315,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
       static bool open = true;
       ozz::sample::ImGui::OpenClose occ(_im_gui, "Animation control", &open);
       if (open) {
-        controller_.OnGui(*animation_opt_, _im_gui);
+        controller_.OnGui(*animation_rt_, _im_gui);
       }
     }
 
@@ -294,14 +349,14 @@ class OptimizeSampleApplication : public ozz::sample::Application {
           label, 0.f, .1f, &optimizer_.scale_tolerance, .5f, optimize_);
 
         std::sprintf(label, "Animation size : %dKB",
-          static_cast<int>(animation_opt_->size()>>10));
+          static_cast<int>(animation_rt_->size()>>10));
 
         _im_gui->DoLabel(label);
 
         if (rebuild) {
           // Delete current animation and rebuild one with the new tolerances.
-          ozz::memory::default_allocator()->Delete(animation_opt_);
-          animation_opt_ = NULL;
+          ozz::memory::default_allocator()->Delete(animation_rt_);
+          animation_rt_ = NULL;
 
           // Invalidates the cache in case the new animation has the same
           // address as the previous one. Other cases are automatic handled by
@@ -320,9 +375,24 @@ class OptimizeSampleApplication : public ozz::sample::Application {
       ozz::sample::ImGui::OpenClose mode(
         _im_gui, "Display mode", &open_mode);
       if (open_mode) {
-        _im_gui->DoRadioButton(eOptimized, "Optimized", &selected_display_);
-        _im_gui->DoRadioButton(eNonOptimized, "Non-optimized", &selected_display_);
-        _im_gui->DoRadioButton(eDifference, "Difference", &selected_display_);
+        _im_gui->DoRadioButton(eRuntimeAnimation, "Rutime animation", &selected_display_);
+        _im_gui->DoRadioButton(eRawAnimation, "Raw animation", &selected_display_);
+        _im_gui->DoRadioButton(eAbsoluteError, "Absolute error", &selected_display_);
+      }
+
+      // Show absolute error.
+      { // FPS
+        char szLabel[64];
+        ozz::sample::Record::Statistics stats = error_record_.GetStatistics();
+        static bool error_open = true;
+        ozz::sample::ImGui::OpenClose oc_stats(_im_gui, szLabel, &error_open);
+        if (error_open) {
+          std::sprintf(szLabel, "Absolute error: %.2f mm", stats.mean);
+          _im_gui->DoGraph(
+            szLabel, 0.f, stats.max, stats.latest,
+            error_record_.cursor(),
+            error_record_.record_begin(), error_record_.record_end());
+        }
       }
     }
     return true;
@@ -330,27 +400,21 @@ class OptimizeSampleApplication : public ozz::sample::Application {
 
   virtual void OnDestroy() {
     ozz::memory::Allocator* allocator = ozz::memory::default_allocator();
-    allocator->Delete(animation_opt_);
-    allocator->Delete(animation_non_opt_);
-    allocator->Deallocate(locals_opt_);
-    allocator->Deallocate(locals_scratch_);
-    allocator->Deallocate(models_);
+    allocator->Delete(animation_rt_);
+    allocator->Deallocate(locals_rt_);
+    allocator->Deallocate(models_rt_);
+    allocator->Deallocate(locals_raw_);
+    allocator->Deallocate(models_raw_);
+    allocator->Deallocate(locals_diff_);
+    allocator->Deallocate(models_diff_);
     allocator->Delete(cache_);
   }
 
   bool BuildAnimations() {
-    assert(!animation_opt_);
+    assert(!animation_rt_);
 
     // Instantiate an aniation builder.
     ozz::animation::offline::AnimationBuilder animation_builder;
-
-    // Builds the non-optimized animation (if it's the first call).
-    if (!animation_non_opt_) {
-      animation_non_opt_ = animation_builder(raw_animation_);
-      if (!animation_non_opt_) {
-        return false;
-      }
-    }
 
     // Builds the optimized animation.
     if (optimize_) {
@@ -360,14 +424,14 @@ class OptimizeSampleApplication : public ozz::sample::Application {
         return false;
       }
       // Builds runtime aniamtion from the optimized one.
-      animation_opt_ = animation_builder(optimized_animation);
+      animation_rt_ = animation_builder(optimized_animation);
     } else {
       // Builds runtime aniamtion from the brut one.
-      animation_opt_ = animation_builder(raw_animation_);
+      animation_rt_ = animation_builder(raw_animation_);
     }
 
     // Check if building runtime animation was successful.
-    if (!animation_opt_) {
+    if (!animation_rt_) {
       return false;
     }
 
@@ -375,16 +439,16 @@ class OptimizeSampleApplication : public ozz::sample::Application {
   }
 
   virtual void GetSceneBounds(ozz::math::Box* _bound) const {
-    ozz::sample::ComputePostureBounds(models_, _bound);
+    ozz::sample::ComputePostureBounds(models(), _bound);
   }
 
  private:
 
   // Selects which animation is displayed.
   enum DisplayMode {
-    eOptimized,
-    eNonOptimized,
-    eDifference,
+    eRuntimeAnimation,
+    eRawAnimation,
+    eAbsoluteError,
   };
   int selected_display_;
 
@@ -409,24 +473,29 @@ class OptimizeSampleApplication : public ozz::sample::Application {
   ozz::animation::SamplingCache* cache_;
 
   // Runtime optimized animation.
-  ozz::animation::Animation* animation_opt_;
+  ozz::animation::Animation* animation_rt_;
 
-  // Runtime non-optimized animation.
-  ozz::animation::Animation* animation_non_opt_;
+  // Buffer of local and model space transformations as sampled from the
+  // rutime (optimized and compressed) animation.
+  ozz::Range<ozz::math::SoaTransform> locals_rt_;
+  ozz::Range<ozz::math::Float4x4> models_rt_;
 
-  // Buffer of local transforms as sampled from animation_opt_.
-  ozz::Range<ozz::math::SoaTransform> locals_opt_;
+  // Buffer of local and model space transformations as sampled from the
+  // non-optimized (raw) animation.
+  ozz::Range<ozz::math::SoaTransform> locals_raw_;
+  ozz::Range<ozz::math::Float4x4> models_raw_;
 
-  // Scratch (temporary) buffer of local transforms, used to store samples from
-  // animation_non_opt_ and difference between optimized and non-optimized
-  // animation samples.
-  ozz::Range<ozz::math::SoaTransform> locals_scratch_;
+  // Buffer of local and model space transformations storing samples from the
+  // difference between optimized and non-optimized animations.
+  ozz::Range<ozz::math::SoaTransform> locals_diff_;
+  ozz::Range<ozz::math::Float4x4> models_diff_;
 
-  // Buffer of model space matrices.
-  ozz::Range<ozz::math::Float4x4> models_;
+  // Record of accuracy errors produced by animation compression and
+  // optimization.
+  ozz::sample::Record error_record_;
 };
 
 int main(int _argc, const char** _argv) {
   const char* title = "Ozz-animation sample: Animation keyframe optimization";
-  return OptimizeSampleApplication().Run(_argc, _argv, "1.0",title);
+  return OptimizeSampleApplication().Run(_argc, _argv, "1.0", title);
 }

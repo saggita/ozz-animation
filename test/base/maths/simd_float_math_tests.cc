@@ -540,7 +540,7 @@ TEST(LogicalFloat, ozz_simd_math) {
   EXPECT_SIMDFLOAT_EQ(andm, 1.f, 0.f, 0.f, 4.f);
 
   const SimdFloat4 andf = ozz::math::And(b, mf);
-  EXPECT_SIMDFLOAT_EQ(andm, 0.f, 0.f, 0.f, 3.f);
+  EXPECT_SIMDFLOAT_EQ(andf, 1.f, 0.f, -0.f, 2.f);
 
   const SimdFloat4 orm = ozz::math::Or(a, m);
   union {float f; unsigned int i;} orx = {ozz::math::GetX(orm)};

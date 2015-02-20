@@ -56,24 +56,24 @@ struct TranslationKey {
 
 // Defines the rotation key frame type.
 // Rotation value is a quaternion. Quaternion are normalized, which means each
-// component is in range [0:1]. This property allows to quantize the first 3
+// component is in range [0:1]. This property allows to quantize the 3
 // components to 3 signed integer 16 bits values. The 4th component is restored
 // at runtime, using the knowledge that |w| = √(1 - (x^2 + y^2 + z^2)). The sign
 // of this 4th component is stored using 1 bit taken from the track member.
 //
-// It's often recommended to store the 3 smallest components (and restore the
-// largest) as they can be pre-multiplied by √2 to gain some precision. As
-// decompression is done in SoA format, restoring a non-fixed component requires
-// too much code to reshuffle the SoaQuaternion. Furthermore 16 bits quantization
-// is already very precise, not worth a 1.4 factor.
+// In more details, compression algorithm stores the 3 smallest components of
+// the quaternion and restores the largest. The 3 smallest can be pre-multiplied
+// by √2 to gain some precision indeed.
+//
 // Quantization could be reduced to 11-11-10 bits as often used for animation
 // key frames, but in this case RotationKey structure would contain 16 bits of
 // padding.
 struct RotationKey {
   float time;
-  uint16_t track:15;
-  bool wsign:1;
-  int16_t value[3];
+  uint16_t track:13;  // The track this key frame belongs to.
+  uint16_t biggest_cpnt:2;  // The biggest component of the quaternion.
+  uint16_t biggest_sign:1;  // The sign of the biggest component. 1 for positive.
+  int16_t value[3];  // The quantized value of the 3 smallest components.
 };
 
 // Defines the scale key frame type.

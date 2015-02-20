@@ -52,7 +52,7 @@ add_custom_command(
     "${CMAKE_CURRENT_BINARY_DIR}/media/mesh.ozz"
   COMMAND ${CMAKE_COMMAND} -E copy "${ozz_media_directory}/bin/skeleton_v1_le.ozz"
     "${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
-  COMMAND ${CMAKE_COMMAND} -E copy "${ozz_media_directory}/bin/animation_v2_le.ozz"
+  COMMAND ${CMAKE_COMMAND} -E copy "${ozz_media_directory}/bin/animation_v3_le.ozz"
     "${CMAKE_CURRENT_BINARY_DIR}/media/animation.ozz")
 
 add_executable(sample_skin

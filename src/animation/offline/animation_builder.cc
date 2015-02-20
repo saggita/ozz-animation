@@ -231,16 +231,25 @@ ozz::Range<RotationKey> CopyToAnimation(
     RotationKey& dkey = dest.begin[i];
     dkey.time = src[i].key.time;
     dkey.track = src[i].track;
-    // Stores the sign of the 4th component.
+
+    // Finds the biggest quaternion component.
     const math::Quaternion& squat = src[i].key.value;
-    dkey.wsign = squat.w >= 0.f;
-    // Quantize x, y, z components on 16 bits signed integers.
-    const int x = static_cast<int>(floor(squat.x * 32767.f + .5f));
-    const int y = static_cast<int>(floor(squat.y * 32767.f + .5f));
-    const int z = static_cast<int>(floor(squat.z * 32767.f + .5f));
-    dkey.value[0] = math::Clamp(-32767, x, 32767) & 0xffff;
-    dkey.value[1] = math::Clamp(-32767, y, 32767) & 0xffff;
-    dkey.value[2] = math::Clamp(-32767, z, 32767) & 0xffff;
+    const size_t biggest = std::max_element(&squat.x, &squat.x + 4) - &squat.x;
+    assert(biggest <= 3);
+    dkey.biggest_cpnt = biggest & 3;
+
+    // Stores the sign of the biggest component.
+    dkey.biggest_sign = (&squat.x)[biggest] >= 0.f;
+
+    // Quantize the 3 smallest components on 16 bits signed integers.
+    const int kMapping[4][3] = {{1, 2, 3}, {0, 2, 3}, {0, 1, 3}, {0, 1, 2}};
+    const int* map = kMapping[biggest];
+    const int a = static_cast<int>(floor((&squat.x)[map[0]] * 32767.f + .5f));
+    const int b = static_cast<int>(floor((&squat.x)[map[1]] * 32767.f + .5f));
+    const int c = static_cast<int>(floor((&squat.x)[map[2]] * 32767.f + .5f));
+    dkey.value[0] = math::Clamp(-32767, a, 32767) & 0xffff;
+    dkey.value[1] = math::Clamp(-32767, b, 32767) & 0xffff;
+    dkey.value[2] = math::Clamp(-32767, c, 32767) & 0xffff;
   }
   return dest;
 }

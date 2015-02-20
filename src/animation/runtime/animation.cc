@@ -89,8 +89,10 @@ void Animation::Save(ozz::io::OArchive& _archive) const {
     _archive << key.time;
     uint16_t track = key.track;
     _archive << track;
-    bool wsign = key.wsign;
-    _archive << wsign;
+    uint8_t biggest_cpnt = key.biggest_cpnt;
+    _archive << biggest_cpnt;
+    bool sign = key.biggest_sign;
+    _archive << sign;
     _archive << ozz::io::MakeArray(key.value);
   }
 
@@ -140,9 +142,12 @@ void Animation::Load(ozz::io::IArchive& _archive, uint32_t _version) {
     uint16_t track;
     _archive >> track;
     key.track = track;
-    bool wsign;
-    _archive >> wsign;
-    key.wsign = wsign;
+    uint8_t biggest_cpnt;
+    _archive >> biggest_cpnt;
+    key.biggest_cpnt = biggest_cpnt & 3;
+    bool sign;
+    _archive >> sign;
+    key.biggest_sign = sign & 1;
     _archive >> ozz::io::MakeArray(key.value);
   }
   int32_t scale_count;

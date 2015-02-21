@@ -330,23 +330,23 @@ class OptimizeSampleApplication : public ozz::sample::Application {
         rebuild |= _im_gui->DoCheckBox("Enable optimzations", &optimize_);
 
         std::sprintf(label,
-                     "Translation : %0.2f cm",
-                     optimizer_.translation_tolerance * 100);
+                     "Translation : %0.2f mm",
+                     optimizer_.translation_tolerance * 1000);
         rebuild |= _im_gui->DoSlider(
-          label, 0.f, .1f, &optimizer_.translation_tolerance, .5f, optimize_);
+          label, 0.f, .1f, &optimizer_.translation_tolerance, .3f, optimize_);
 
         std::sprintf(label,
-                     "Rotation : %0.2f degree",
+                     "Rotation : %0.3f degree",
                      optimizer_.rotation_tolerance * 180.f / ozz::math::kPi);
 
         rebuild |= _im_gui->DoSlider(
           label, 0.f, 10.f * ozz::math::kPi / 180.f,
-          &optimizer_.rotation_tolerance, .5f, optimize_);
+          &optimizer_.rotation_tolerance, .3f, optimize_);
 
         std::sprintf(label,
-                     "Scale : %0.2f %%", optimizer_.scale_tolerance * 100.f);
+                     "Scale : %0.3f %%", optimizer_.scale_tolerance * 100.f);
         rebuild |= _im_gui->DoSlider(
-          label, 0.f, .1f, &optimizer_.scale_tolerance, .5f, optimize_);
+          label, 0.f, .1f, &optimizer_.scale_tolerance, .3f, optimize_);
 
         std::sprintf(label, "Animation size : %dKB",
           static_cast<int>(animation_rt_->size()>>10));
@@ -387,7 +387,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
         static bool error_open = true;
         ozz::sample::ImGui::OpenClose oc_stats(_im_gui, szLabel, &error_open);
         if (error_open) {
-          std::sprintf(szLabel, "Absolute error: %.2f mm", stats.mean);
+          std::sprintf(szLabel, "Absolute error: %.2f mm", *error_record_.cursor());
           _im_gui->DoGraph(
             szLabel, 0.f, stats.max, stats.latest,
             error_record_.cursor(),

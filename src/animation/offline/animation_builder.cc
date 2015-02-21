@@ -181,6 +181,13 @@ ozz::Range<ScaleKey> CopyToAnimation(
   return dest;
 }
 
+namespace {
+// Compares float absolute values.
+bool LessAbs(float _left, float _right) {
+  return abs(_left) < abs(_right);
+}
+}
+
 // Specialize for rotations in order to normalize quaternions.
 // Consecutive opposite quaternions are also fixed up in order to avoid checking
 // for the smallest path during the NLerp runtime algorithm.
@@ -224,29 +231,33 @@ ozz::Range<RotationKey> CopyToAnimation(
             array_end(*_src),
             &SortingKeyLess<SortingRotationKey>);
 
-  // Fills output.
+  // Fills rotation keys output.
   ozz::Range<RotationKey> dest =
     memory::default_allocator()->AllocateRange<RotationKey>(src_count);
   for (size_t i = 0; i < src_count; ++i) {
+    const SortingRotationKey& skey = src[i];
     RotationKey& dkey = dest.begin[i];
-    dkey.time = src[i].key.time;
-    dkey.track = src[i].track;
+    dkey.time = skey.key.time;
+    dkey.track = skey.track;
 
-    // Finds the biggest quaternion component.
-    const math::Quaternion& squat = src[i].key.value;
-    const size_t biggest = std::max_element(&squat.x, &squat.x + 4) - &squat.x;
-    assert(biggest <= 3);
-    dkey.biggest_cpnt = biggest & 3;
+    // Finds the largest quaternion component.
+    const float quat[4] = {
+      skey.key.value.x, skey.key.value.y, skey.key.value.z, skey.key.value.w
+    };
+    const size_t largest = std::max_element(quat, quat + 4, LessAbs) - quat;
+    assert(largest <= 3);
+    dkey.largest = largest & 0x3;
 
-    // Stores the sign of the biggest component.
-    dkey.biggest_sign = (&squat.x)[biggest] >= 0.f;
+    // Stores the sign of the largest component.
+    dkey.sign = quat[largest] < 0.f;
 
     // Quantize the 3 smallest components on 16 bits signed integers.
+    const float kFloat2Int = 32767.f * math::kSqrt2;
     const int kMapping[4][3] = {{1, 2, 3}, {0, 2, 3}, {0, 1, 3}, {0, 1, 2}};
-    const int* map = kMapping[biggest];
-    const int a = static_cast<int>(floor((&squat.x)[map[0]] * 32767.f + .5f));
-    const int b = static_cast<int>(floor((&squat.x)[map[1]] * 32767.f + .5f));
-    const int c = static_cast<int>(floor((&squat.x)[map[2]] * 32767.f + .5f));
+    const int* map = kMapping[largest];
+    const int a = static_cast<int>(floor(quat[map[0]] * kFloat2Int + .5f));
+    const int b = static_cast<int>(floor(quat[map[1]] * kFloat2Int + .5f));
+    const int c = static_cast<int>(floor(quat[map[2]] * kFloat2Int + .5f));
     dkey.value[0] = math::Clamp(-32767, a, 32767) & 0xffff;
     dkey.value[1] = math::Clamp(-32767, b, 32767) & 0xffff;
     dkey.value[2] = math::Clamp(-32767, c, 32767) & 0xffff;

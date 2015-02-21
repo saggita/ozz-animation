@@ -71,8 +71,8 @@ struct TranslationKey {
 struct RotationKey {
   float time;
   uint16_t track:13;  // The track this key frame belongs to.
-  uint16_t biggest_cpnt:2;  // The biggest component of the quaternion.
-  uint16_t biggest_sign:1;  // The sign of the biggest component. 1 for positive.
+  uint16_t largest:2;  // The largest component of the quaternion.
+  uint16_t sign:1;  // The sign of the largest component. 1 for negative.
   int16_t value[3];  // The quantized value of the 3 smallest components.
 };
 

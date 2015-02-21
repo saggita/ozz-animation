@@ -33,6 +33,7 @@
 #include <cassert>
 
 #include "ozz/base/maths/math_ex.h"
+#include "ozz/base/maths/math_constant.h"
 #include "ozz/base/maths/soa_transform.h"
 #include "ozz/base/memory/allocator.h"
 #include "ozz/animation/runtime/animation.h"
@@ -202,7 +203,12 @@ void Decompress(const RotationKey& _k0,
 
   const math::SimdFloat4 one = math::simd_float4::one();
   const math::SimdFloat4 eps = math::simd_float4::Load1(1e-16f);
-  const math::SimdFloat4 int_to_float = math::simd_float4::Load1(1.f / 32767.f);
+  const math::SimdFloat4 kInt2Float =
+    math::simd_float4::Load1(1.f / (32767.f * math::kSqrt2));
+  const math::SimdInt4 mf000 = math::simd_int4::mask_f000();
+  const math::SimdInt4 m0f00 = math::simd_int4::mask_0f00();
+  const math::SimdInt4 m00f0 = math::simd_int4::mask_00f0();
+  const math::SimdInt4 m000f = math::simd_int4::mask_000f();
 
   // Defines a mapping table that defines components assignation in the output
   // quaternion.
@@ -210,56 +216,56 @@ void Decompress(const RotationKey& _k0,
     {0, 0, 1, 2}, {0, 0, 1, 2}, {0, 1, 0, 2}, {0, 1, 2, 0}
   };
   // Selects proper mapping for each key.
-  const int* m0 = kCpntMapping[_k0.biggest_cpnt];
-  const int* m1 = kCpntMapping[_k1.biggest_cpnt];
-  const int* m2 = kCpntMapping[_k2.biggest_cpnt];
-  const int* m3 = kCpntMapping[_k3.biggest_cpnt];
+  const int* m0 = kCpntMapping[_k0.largest];
+  const int* m1 = kCpntMapping[_k1.largest];
+  const int* m2 = kCpntMapping[_k2.largest];
+  const int* m3 = kCpntMapping[_k3.largest];
 
-  // Prepares an array input values, according to the mapping required to
-  // restore quaternion biggest value.
-  uint16_t cmp_keys[4][4] = {
+  // Prepares an array of input values, according to the mapping required to
+  // restore quaternion largest component.
+  OZZ_ALIGN(16) int cmp_keys[4][4] = {
     {_k0.value[m0[0]], _k1.value[m1[0]], _k2.value[m2[0]], _k3.value[m3[0]]},
     {_k0.value[m0[1]], _k1.value[m1[1]], _k2.value[m2[1]], _k3.value[m3[1]]},
     {_k0.value[m0[2]], _k1.value[m1[2]], _k2.value[m2[2]], _k3.value[m3[2]]},
     {_k0.value[m0[3]], _k1.value[m1[3]], _k2.value[m2[3]], _k3.value[m3[3]]},
   };
-  cmp_keys[0][_k0.biggest_cpnt] = 0;
-  cmp_keys[1][_k1.biggest_cpnt] = 0;
-  cmp_keys[2][_k2.biggest_cpnt] = 0;
-  cmp_keys[3][_k3.biggest_cpnt] = 0;
 
-  math::SoaQuaternion quat = {
-    int_to_float * math::simd_float4::FromInt(math::simd_int4::Load(
-    cmp_keys[0][0], cmp_keys[0][1], cmp_keys[0][2], cmp_keys[0][3])),
-    int_to_float * math::simd_float4::FromInt(math::simd_int4::Load(
-    cmp_keys[1][0], cmp_keys[1][1], cmp_keys[1][2], cmp_keys[1][3])),
-    int_to_float * math::simd_float4::FromInt(math::simd_int4::Load(
-    cmp_keys[2][0], cmp_keys[2][1], cmp_keys[2][2], cmp_keys[2][3])),
-    int_to_float * math::simd_float4::FromInt(math::simd_int4::Load(
-    cmp_keys[3][0], cmp_keys[3][1], cmp_keys[3][2], cmp_keys[3][3]))
+  // Resets largest component to 0.
+  cmp_keys[_k0.largest][0] = 0;
+  cmp_keys[_k1.largest][1] = 0;
+  cmp_keys[_k2.largest][2] = 0;
+  cmp_keys[_k3.largest][3] = 0;
+
+  // Rebuilds quaternion from quantized values.
+  math::SimdFloat4 cpnt[4] = {
+    kInt2Float * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[0])),
+    kInt2Float * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[1])),
+    kInt2Float * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[2])),
+    kInt2Float * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[3])),
   };
 
   // Get back sign of the 4th component.
-  const math::SimdInt4 wsign0 = math::simd_int4::Load(
-    _k0.biggest_sign != 0, _k1.biggest_sign != 0, _k2.biggest_sign != 0, _k3.biggest_sign != 0);
+  const math::SimdInt4 sign = math::ShiftL(
+    math::simd_int4::Load(_k0.sign, _k1.sign, _k2.sign, _k3.sign), 31);
+
   // Get back length of 4th component. Favors performance over accuracy by
   // using x * RSqrtEst(x) instead of Sqrt(x).
-  const math::SimdFloat4 ww0 = math::Max(eps,
-    one - (quat.x * quat.x + quat.y * quat.y + quat.z * quat.z + quat.w * quat.w));
+  const math::SimdFloat4 dot =
+    cpnt[0] * cpnt[0] + cpnt[1] * cpnt[1] + cpnt[2] * cpnt[2] + cpnt[3] * cpnt[3];
+  const math::SimdFloat4 ww0 = math::Max(eps, one - dot);
   const math::SimdFloat4 w0 = ww0 * math::RSqrtEst(ww0);
   // Reapply 4th component's sign.
-  const math::SimdFloat4 restored = math::Select(wsign0, w0, -w0);
+  const math::SimdFloat4 restored = math::Or(w0, sign);
 
-  // Re-injects the component inside the SoA structure.
-  quat.x = math::Or(quat.x, math::And(restored, math::simd_int4::Load(_k0.biggest_cpnt == 0, _k1.biggest_cpnt == 0, _k2.biggest_cpnt == 0, _k3.biggest_cpnt == 0)));
-  quat.y = math::Or(quat.y, math::And(restored, math::simd_int4::Load(_k0.biggest_cpnt == 1, _k1.biggest_cpnt == 1, _k2.biggest_cpnt == 1, _k3.biggest_cpnt == 1)));
-  quat.z = math::Or(quat.z, math::And(restored, math::simd_int4::Load(_k0.biggest_cpnt == 2, _k1.biggest_cpnt == 2, _k2.biggest_cpnt == 2, _k3.biggest_cpnt == 2)));
-  quat.w = math::Or(quat.w, math::And(restored, math::simd_int4::Load(_k0.biggest_cpnt == 3, _k1.biggest_cpnt == 3, _k2.biggest_cpnt == 3, _k3.biggest_cpnt == 3)));
+  // Re-injects the largest component inside the SoA structure.
+  cpnt[_k0.largest] = math::Or(cpnt[_k0.largest], math::And(restored, mf000));
+  cpnt[_k1.largest] = math::Or(cpnt[_k1.largest], math::And(restored, m0f00));
+  cpnt[_k2.largest] = math::Or(cpnt[_k2.largest], math::And(restored, m00f0));
+  cpnt[_k3.largest] = math::Or(cpnt[_k3.largest], math::And(restored, m000f));
 
   // Stores result.
-  *_time = math::simd_float4::Load(
-    _k0.time, _k1.time, _k2.time, _k3.time);
-  *_quat = quat;
+  *_time = math::simd_float4::Load(_k0.time, _k1.time, _k2.time, _k3.time);
+  _quat->x = cpnt[0]; _quat->y = cpnt[1]; _quat->z = cpnt[2]; _quat->w = cpnt[3];
 }
 
 void UpdateSoaRotations(int _num_soa_tracks,

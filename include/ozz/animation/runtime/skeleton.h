@@ -62,7 +62,7 @@ class Skeleton {
     // required to store a joint index. Limiting the number of joints also helps
     // handling worst size cases, like when it is required to allocate an array
     // of joints on the stack.
-    kMaxJointsNumBits = 13,
+    kMaxJointsNumBits = 10,
 
     // Defines the maximum number of joints.
     // Reserves one index (the last) for kNoParentIndex value.

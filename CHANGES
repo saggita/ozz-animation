@@ -6,8 +6,6 @@ Release version 0.7.3.----------------------------------------------------------
   numerical accuracy when the restored component is small. It also allows to
   pre-multiply each of the 3 smallest components by sqrt(2), maximizing
   quantization range (from 32767 to 46339, which is over 41%).
-  - [animation] Increases max number of joints to 8191, now the compressed
-  animation key data structure is fixed.
 
 Release version 0.7.2.----------------------------------------------------------
 

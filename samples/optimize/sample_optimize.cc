@@ -212,7 +212,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     ozz::Range<ozz::math::SoaTransform> _locals) {
 
     // Ensure output is big enough.
-    if (_locals.Count() * 4 < _animation.num_tracks()) {
+    if (_locals.Count() * 4 < _animation.tracks.size()) {
       return false;
     }
 

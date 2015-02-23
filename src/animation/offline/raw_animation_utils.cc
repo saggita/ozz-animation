@@ -85,14 +85,15 @@ typename _Track::value_type::Value SampleComponent(const _Track& _track,
   } else {
     assert(_track.size() >= 2);
     // Needs to interpolate, so first find the keys.
-    const _Track::value_type cmp = {_time, _Track::value_type::identity()};
-    _Track::const_pointer it = std::lower_bound(
-      array_begin(_track), array_end(_track), cmp, Less<_Track::value_type>);
+    const typename _Track::value_type cmp = {
+      _time, _Track::value_type::identity()};
+    typename _Track::const_pointer it = std::lower_bound(
+      array_begin(_track), array_end(_track), cmp, Less<typename _Track::value_type>);
     assert(it > array_begin(_track) && it < array_end(_track));
 
     // Then interpolate.
-    const _Track::const_reference right = it[0];
-    const _Track::const_reference left = it[-1];
+    const typename _Track::const_reference right = it[0];
+    const typename _Track::const_reference left = it[-1];
     const float alpha = (_time - left.time) / (right.time - left.time);
     return _lerp(left.value, right.value, alpha);
   }

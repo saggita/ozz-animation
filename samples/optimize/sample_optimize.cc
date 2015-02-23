@@ -84,7 +84,7 @@ bool LoadAnimation(const char* _filename,
   }
   ozz::io::IArchive archive(&file);
   if (!archive.TestTag<ozz::animation::offline::RawAnimation>()) {
-    ozz::log::Err() << "Failed to load rawvanimation instance from file " <<
+    ozz::log::Err() << "Failed to load raw animation instance from file " <<
       _filename << "." << std::endl;
     return false;
   }

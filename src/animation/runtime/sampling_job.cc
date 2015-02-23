@@ -221,10 +221,10 @@ void UpdateSoaTranslations(int _num_soa_tracks,
 \
   /* Rebuilds quaternion from quantized values.*/\
   math::SimdFloat4 cpnt[4] = {\
-    cnv * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[0])),\
-    cnv * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[1])),\
-    cnv * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[2])),\
-    cnv * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[3])),\
+    kInt2Float * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[0])),\
+    kInt2Float * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[1])),\
+    kInt2Float * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[2])),\
+    kInt2Float * math::simd_float4::FromInt(math::simd_int4::LoadPtr(cmp_keys[3])),\
   };\
 \
   /* Get back length of 4th component. Favors performance over accuracy by*/\
@@ -257,7 +257,8 @@ void UpdateSoaRotations(int _num_soa_tracks,
   // Prepares constants.
   const math::SimdFloat4 one = math::simd_float4::one();
   const math::SimdFloat4 eps = math::simd_float4::Load1(1e-16f);
-  const math::SimdFloat4 cnv = math::simd_float4::Load1(1.f / (32767.f * math::kSqrt2));
+  const math::SimdFloat4 kInt2Float =
+    math::simd_float4::Load1(1.f / (32767.f * math::kSqrt2));
   const math::SimdInt4 mf000 = math::simd_int4::mask_f000();
   const math::SimdInt4 m0f00 = math::simd_int4::mask_0f00();
   const math::SimdInt4 m00f0 = math::simd_int4::mask_00f0();

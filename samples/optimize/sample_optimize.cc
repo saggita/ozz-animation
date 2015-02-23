@@ -194,7 +194,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
          models_rt < models_rt_.end;
          ++models_rt, ++models_raw) {
 
-      // Computes the difference 
+      // Computes the translation difference.
       const ozz::math::SimdFloat4 diff =
         models_rt->cols[3] - models_raw->cols[3];
 
@@ -249,7 +249,6 @@ class OptimizeSampleApplication : public ozz::sample::Application {
 
     return true;
   }
-
 
   // Selects model space matrices according to the display mode.
   ozz::Range<const ozz::math::Float4x4> models() const {

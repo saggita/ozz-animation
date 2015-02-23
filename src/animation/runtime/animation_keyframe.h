@@ -58,15 +58,15 @@ struct TranslationKey {
 // Rotation value is a quaternion. Quaternion are normalized, which means each
 // component is in range [0:1]. This property allows to quantize the 3
 // components to 3 signed integer 16 bits values. The 4th component is restored
-// at runtime, using the knowledge that |w| = âˆš(1 - (x^2 + y^2 + z^2)). The sign
-// of this 4th component is stored using 1 bit taken from the track member.
+// at runtime, using the knowledge that |w| = sqrt(1 - (x² + y² + z²)).
+// The sign of this 4th component is stored using 1 bit taken from the track member.
 //
 // In more details, compression algorithm stores the 3 smallest components of
 // the quaternion and restores the largest. The 3 smallest can be pre-multiplied
-// by âˆš2 to gain some precision indeed.
+// by sqrt(2) to gain some precision indeed.
 //
 // Quantization could be reduced to 11-11-10 bits as often used for animation
-// key frames, but in this case RotationKey structure would contain 16 bits of
+// key frames, but in this case RotationKey structure would induce 16 bits of
 // padding.
 struct RotationKey {
   float time;

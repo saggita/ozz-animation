@@ -186,6 +186,35 @@ namespace {
 bool LessAbs(float _left, float _right) {
   return abs(_left) < abs(_right);
 }
+
+// Compresses quaternion to ozz::animation::RotationKey format.
+// The 3 smallest components of the quaternion are quantized to 16 bits
+// integers, while the largest is recomputed thanks to quaternion normalization
+// property (sqrt(x²+y²+z²+w²) = 1). Because the 3 components are the 3 smallest,
+// their value cannot be greater than sqrt(2)/2. Thus quantization quality is
+// improved by pre-multiplying each componenent by sqrt(2).
+void CompressQuat(const ozz::math::Quaternion& _src,
+                  ozz::animation::RotationKey* _dest) {
+  // Finds the largest quaternion component.
+  const float quat[4] = {_src.x, _src.y, _src.z, _src.w};
+  const size_t largest = std::max_element(quat, quat + 4, LessAbs) - quat;
+  assert(largest <= 3);
+  _dest->largest = largest & 0x3;
+
+  // Stores the sign of the largest component.
+  _dest->sign = quat[largest] < 0.f;
+
+  // Quantize the 3 smallest components on 16 bits signed integers.
+  const float kFloat2Int = 32767.f * math::kSqrt2;
+  const int kMapping[4][3] = {{1, 2, 3}, {0, 2, 3}, {0, 1, 3}, {0, 1, 2}};
+  const int* map = kMapping[largest];
+  const int a = static_cast<int>(floor(quat[map[0]] * kFloat2Int + .5f));
+  const int b = static_cast<int>(floor(quat[map[1]] * kFloat2Int + .5f));
+  const int c = static_cast<int>(floor(quat[map[2]] * kFloat2Int + .5f));
+  _dest->value[0] = math::Clamp(-32767, a, 32767) & 0xffff;
+  _dest->value[1] = math::Clamp(-32767, b, 32767) & 0xffff;
+  _dest->value[2] = math::Clamp(-32767, c, 32767) & 0xffff;
+}
 }
 
 // Specialize for rotations in order to normalize quaternions.
@@ -240,27 +269,8 @@ ozz::Range<RotationKey> CopyToAnimation(
     dkey.time = skey.key.time;
     dkey.track = skey.track;
 
-    // Finds the largest quaternion component.
-    const float quat[4] = {
-      skey.key.value.x, skey.key.value.y, skey.key.value.z, skey.key.value.w
-    };
-    const size_t largest = std::max_element(quat, quat + 4, LessAbs) - quat;
-    assert(largest <= 3);
-    dkey.largest = largest & 0x3;
-
-    // Stores the sign of the largest component.
-    dkey.sign = quat[largest] < 0.f;
-
-    // Quantize the 3 smallest components on 16 bits signed integers.
-    const float kFloat2Int = 32767.f * math::kSqrt2;
-    const int kMapping[4][3] = {{1, 2, 3}, {0, 2, 3}, {0, 1, 3}, {0, 1, 2}};
-    const int* map = kMapping[largest];
-    const int a = static_cast<int>(floor(quat[map[0]] * kFloat2Int + .5f));
-    const int b = static_cast<int>(floor(quat[map[1]] * kFloat2Int + .5f));
-    const int c = static_cast<int>(floor(quat[map[2]] * kFloat2Int + .5f));
-    dkey.value[0] = math::Clamp(-32767, a, 32767) & 0xffff;
-    dkey.value[1] = math::Clamp(-32767, b, 32767) & 0xffff;
-    dkey.value[2] = math::Clamp(-32767, c, 32767) & 0xffff;
+    // Compress quaternion to destination container.
+    CompressQuat(skey.key.value, &dkey);
   }
   return dest;
 }

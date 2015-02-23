@@ -50,6 +50,16 @@ set_target_properties(test_raw_skeleton_archive_versioning PROPERTIES FOLDER "oz
 add_test(NAME test_raw_skeleton_archive_versioning_le COMMAND test_raw_skeleton_archive_versioning "--file=${ozz_media_directory}/bin/raw_skeleton_v1_le.ozz" "--joints=67" "--root_name=Hips")
 add_test(NAME test_raw_skeleton_archive_versioning_be COMMAND test_raw_skeleton_archive_versioning "--file=${ozz_media_directory}/bin/raw_skeleton_v1_be.ozz" "--joints=67" "--root_name=Hips")
 
+add_executable(test_raw_animation_utils
+  raw_animation_utils_tests.cc)
+target_link_libraries(test_raw_animation_utils
+  ozz_animation_offline
+  ozz_animation
+  ozz_base
+  gtest)
+set_target_properties(test_raw_animation_utils PROPERTIES FOLDER "ozz/tests/animation_offline")
+add_test(NAME test_raw_animation_utils COMMAND test_raw_animation_utils)
+
 add_executable(test_raw_animation_archive
   raw_animation_archive_tests.cc)
 target_link_libraries(test_raw_animation_archive

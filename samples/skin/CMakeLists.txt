@@ -16,8 +16,8 @@ if(ozz_build_fbx)
 
   add_custom_command(TARGET sample_skin_fbx2skin POST_BUILD
     DEPENDS
-      "${ozz_media_directory}/fbx/alain/skeleton.fbx"
-    COMMAND sample_skin_fbx2skin "--file=${ozz_media_directory}/fbx/alain/skeleton.fbx" "--skeleton=${ozz_media_directory}/bin/skeleton_v1_le.ozz" "--skin=${ozz_media_directory}/bin/mesh.ozz")
+      "${ozz_media_directory}/fbx/alain/arnaud.fbx"
+    COMMAND sample_skin_fbx2skin "--file=${ozz_media_directory}/fbx/alain/arnaud.fbx" "--skeleton=${ozz_media_directory}/bin/skeleton_v1_le.ozz" "--skin=${ozz_media_directory}/bin/mesh.ozz")
 
   set(ozz_mesh_generation_dependency sample_skin_fbx2skin)
 

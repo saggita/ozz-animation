@@ -265,10 +265,10 @@ class OptimizeSampleApplication : public ozz::sample::Application {
 
   // Samples animation, transforms to model space and renders.
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
-
     // Renders posture.
-    return _renderer->
-      DrawPosture(skeleton_, models(), ozz::math::Float4x4::identity());
+    return _renderer->DrawPosture(skeleton_,
+                                  models(),
+                                  ozz::math::Float4x4::identity());
   }
 
   virtual bool OnInitialize() {

@@ -212,21 +212,29 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     ozz::Range<ozz::math::SoaTransform> _locals) {
 
     // Ensure output is big enough.
-    if (_locals.Count() * 4 < _animation.tracks.size()) {
+    if (_locals.Count() * 4 < _animation.tracks.size() &&
+        locals_raw_aos_.Count() * 4 < _animation.tracks.size()) {
       return false;
     }
 
+    // First samples the raw animation (using raw_animation_utils helper
+    // functions) to the AoS transforms array.
+    if (!ozz::animation::offline::Sample(_animation, _time, locals_raw_aos_)) {
+      return false;
+    }
+
+    // Then convert AoS transforms to SoA transform array.
     for (int i = 0; i < _animation.num_tracks(); i += 4) {
       ozz::math::SimdFloat4 translations[4];
       ozz::math::SimdFloat4 rotations[4];
       ozz::math::SimdFloat4 scales[4];
-      // Samples 4 consecutive tracks.
+
+      // Works on 4 consecutive tracks, or what remains to be processed if it's
+      // lower than 4.
       const int jmax = ozz::math::Min(_animation.num_tracks() - i, 4);
       for (int j = 0; j < jmax; ++j) {
-        // Sample track.
-        ozz::math::Transform transform =
-          SampleTrack(_animation.tracks[i + j], _time);
         // Convert transform to AoS SimdFloat4 values.
+        const ozz::math::Transform& transform = locals_raw_aos_[i + j];
         translations[j] =
           ozz::math::simd_float4::Load3PtrU(&transform.translation.x);
         rotations[j] =
@@ -295,6 +303,8 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     locals_rt_ =
       allocator->AllocateRange<ozz::math::SoaTransform>(num_soa_joints);
     models_rt_ = allocator->AllocateRange<ozz::math::Float4x4>(num_joints);
+    locals_raw_aos_ =
+      allocator->AllocateRange<ozz::math::Transform>(num_joints);
     locals_raw_ =
       allocator->AllocateRange<ozz::math::SoaTransform>(num_soa_joints);
     models_raw_ = allocator->AllocateRange<ozz::math::Float4x4>(num_joints);
@@ -402,6 +412,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     allocator->Delete(animation_rt_);
     allocator->Deallocate(locals_rt_);
     allocator->Deallocate(models_rt_);
+    allocator->Deallocate(locals_raw_aos_);
     allocator->Deallocate(locals_raw_);
     allocator->Deallocate(models_raw_);
     allocator->Deallocate(locals_diff_);
@@ -481,6 +492,9 @@ class OptimizeSampleApplication : public ozz::sample::Application {
 
   // Buffer of local and model space transformations as sampled from the
   // non-optimized (raw) animation.
+  // Sampling the raw animation results in AoS data, meaning we have to
+  // allocate AoS data and do the SoA conversion by hand.
+  ozz::Range<ozz::math::Transform> locals_raw_aos_;
   ozz::Range<ozz::math::SoaTransform> locals_raw_;
   ozz::Range<ozz::math::Float4x4> models_raw_;
 

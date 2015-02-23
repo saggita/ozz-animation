@@ -101,16 +101,53 @@ typename _Track::value_type::Value SampleComponent(const _Track& _track,
 }
 }  // namespace
 
-math::Transform SampleTrack(
-  const animation::offline::RawAnimation::JointTrack& _track,
-  float _time) {
+bool SampleTrack(const RawAnimation& animation,
+                 int _track,
+                 float _time,
+                 math::Transform* _transform) {
+
+  // Early out if animation isn't valid.
+  if (!animation.Validate()) {
+    return false;
+  }
+
+  // Invalid parameter.
+  if (_track < 0 || _track > animation.num_tracks()) {
+    return false;
+  }
 
   // Samples each track's component.
-  math::Transform ret;
-  ret.translation = SampleComponent(_track.translations, LerpTranslation, _time);
-  ret.rotation = SampleComponent(_track.rotations, LerpRotation, _time);
-  ret.scale = SampleComponent(_track.scales, LerpScale, _time);
-  return ret;
+  const animation::offline::RawAnimation::JointTrack& track = animation.tracks[_track];
+  _transform->translation = SampleComponent(track.translations, LerpTranslation, _time);
+  _transform->rotation = SampleComponent(track.rotations, LerpRotation, _time);
+  _transform->scale = SampleComponent(track.scales, LerpScale, _time);
+
+  return true;
+}
+
+bool Sample(const RawAnimation& animation,
+            float _time,
+            Range<math::Transform> _transforms) {
+
+  // Early out if animation isn't valid.
+  if (!animation.Validate()) {
+    return false;
+  }
+
+  // Invalid parameter.
+  if (_transforms.Count() < animation.tracks.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < animation.tracks.size(); ++i) {
+    // Samples each track's component.
+    const animation::offline::RawAnimation::JointTrack& track = animation.tracks[i];
+    math::Transform& transform = _transforms[i];
+    transform.translation = SampleComponent(track.translations, LerpTranslation, _time);
+    transform.rotation = SampleComponent(track.rotations, LerpRotation, _time);
+    transform.scale = SampleComponent(track.scales, LerpScale, _time);
+  }
+  return true;
 }
 }  // offline
 }  // animation

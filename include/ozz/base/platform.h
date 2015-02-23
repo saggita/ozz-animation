@@ -123,8 +123,9 @@ struct Range {
       end(_begin + _size) {
   }
   // Construct a range from an array, its size is automatically deduced.
+  // It isn't declared explicit as conversion is free and safe.
   template <size_t _size>
-  explicit Range(_Ty (&_array)[_size])
+  Range(_Ty (&_array)[_size])
     : begin(_array),
       end(_array + _size) {
   }

@@ -37,6 +37,8 @@
 
 #include "ozz/animation/offline/raw_animation.h"
 
+#include "ozz/animation/runtime/skeleton.h"
+
 namespace ozz {
 namespace animation {
 namespace offline {
@@ -136,9 +138,13 @@ math::Float3 LerpScale(const math::Float3& _a,
                        float _alpha) {
   return math::Lerp(_a, _b, _alpha);
 }
+
+
+
 }  // namespace
 
 bool AnimationOptimizer::operator()(const RawAnimation& _input,
+                                    const Skeleton& _skeleton,
                                     RawAnimation* _output) const {
   if (!_output) {
     return false;
@@ -148,6 +154,11 @@ bool AnimationOptimizer::operator()(const RawAnimation& _input,
 
   // Validate animation.
   if (!_input.Validate()) {
+    return false;
+  }
+
+  // Validates the skeleton matches the animation.
+  if (_input.num_tracks() != _skeleton.num_joints()) {
     return false;
   }
 

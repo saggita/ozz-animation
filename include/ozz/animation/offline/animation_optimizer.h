@@ -33,6 +33,9 @@
 
 namespace ozz {
 namespace animation {
+
+// Forward declare runtime skeleton type.
+class Skeleton;
 namespace offline {
 
 // Forward declare offline animation type.
@@ -52,7 +55,9 @@ class AnimationOptimizer {
   // *_output must be a valid RawAnimation instance.
   // Returns false on failure and resets _output to an empty animation.
   // See RawAnimation::Validate() for more details about failure reasons.
-  bool operator()(const RawAnimation& _input, RawAnimation* _output) const;
+  bool operator()(const RawAnimation& _input,
+                  const Skeleton& _skeleton,
+                  RawAnimation* _output) const;
 
   // Translation optimization tolerance, defined as the distance between two
   // translation values in meters.

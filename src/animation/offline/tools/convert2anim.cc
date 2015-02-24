@@ -264,7 +264,7 @@ int AnimationConverter::operator()(int _argc, const char** _argv) {
     optimizer.translation_tolerance = OPTIONS_translation;
     optimizer.scale_tolerance = OPTIONS_scale;
     ozz::animation::offline::RawAnimation raw_optimized_animation;
-    if (!optimizer(raw_animation, &raw_optimized_animation)) {
+    if (!optimizer(raw_animation, *skeleton, &raw_optimized_animation)) {
       ozz::log::Err() << "Failed to optimize animation." << std::endl;
       return EXIT_FAILURE;
     }

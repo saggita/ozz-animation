@@ -37,6 +37,13 @@
 #include "ozz/animation/offline/raw_animation.h"
 #include "ozz/animation/offline/animation_builder.h"
 
+#include "ozz/animation/offline/skeleton_builder.h"
+#include "ozz/animation/offline/raw_skeleton.h"
+#include "ozz/animation/runtime/skeleton.h"
+
+using ozz::animation::Skeleton;
+using ozz::animation::offline::RawSkeleton;
+using ozz::animation::offline::SkeletonBuilder;
 using ozz::animation::offline::RawAnimation;
 using ozz::animation::offline::AnimationOptimizer;
 
@@ -45,13 +52,20 @@ TEST(Error, AnimationOptimizer) {
 
   { // NULL output.
     RawAnimation input;
+    Skeleton skeleton;
     EXPECT_TRUE(input.Validate());
 
     // Builds animation
-    EXPECT_FALSE(optimizer(input, NULL));
+    EXPECT_FALSE(optimizer(input, skeleton, NULL));
   }
 
   { // Invalid input animation.
+    RawSkeleton raw_skeleton;
+    raw_skeleton.roots.resize(1);
+    SkeletonBuilder skeleton_builder;
+    Skeleton* skeleton = skeleton_builder(raw_skeleton);
+    ASSERT_TRUE(skeleton != NULL);
+
     RawAnimation input;
     input.duration = -1.f;
     EXPECT_FALSE(input.Validate());
@@ -60,13 +74,36 @@ TEST(Error, AnimationOptimizer) {
     RawAnimation output;
     output.duration = -1.f;
     output.tracks.resize(1);
-    EXPECT_FALSE(optimizer(input, &output));
+    EXPECT_FALSE(optimizer(input, *skeleton, &output));
+    EXPECT_FLOAT_EQ(output.duration, RawAnimation().duration);
+    EXPECT_EQ(output.num_tracks(), 0);
+
+    ozz::memory::default_allocator()->Delete(skeleton);
+  }
+
+  { // Invalid skeleton.
+    Skeleton skeleton;
+
+    RawAnimation input;
+    input.tracks.resize(1);
+    EXPECT_TRUE(input.Validate());
+
+    // Builds animation
+    RawAnimation output;
+    EXPECT_FALSE(optimizer(input, skeleton, &output));
     EXPECT_FLOAT_EQ(output.duration, RawAnimation().duration);
     EXPECT_EQ(output.num_tracks(), 0);
   }
 }
 
 TEST(Optimize, AnimationOptimizer) {
+  // Prepares a skeleton.
+  RawSkeleton raw_skeleton;
+  raw_skeleton.roots.resize(1);
+  SkeletonBuilder skeleton_builder;
+  Skeleton* skeleton = skeleton_builder(raw_skeleton);
+  ASSERT_TRUE(skeleton != NULL);
+
   AnimationOptimizer optimizer;
 
   RawAnimation input;
@@ -135,7 +172,7 @@ TEST(Optimize, AnimationOptimizer) {
     optimizer.translation_tolerance = 0.f;
     optimizer.rotation_tolerance = 0.f;
     RawAnimation output;
-    EXPECT_TRUE(optimizer(input, &output));
+    ASSERT_TRUE(optimizer(input, *skeleton, &output));
     EXPECT_EQ(output.num_tracks(), 1);
 
     const RawAnimation::JointTrack::Translations& translations =
@@ -162,7 +199,7 @@ TEST(Optimize, AnimationOptimizer) {
     optimizer.translation_tolerance = .02f;
     optimizer.rotation_tolerance = .2f * 3.14159f / 180.f;  // .2 degree.
     RawAnimation output;
-    EXPECT_TRUE(optimizer(input, &output));
+    ASSERT_TRUE(optimizer(input, *skeleton, &output));
     EXPECT_EQ(output.num_tracks(), 1);
 
     const RawAnimation::JointTrack::Translations& translations =
@@ -180,4 +217,6 @@ TEST(Optimize, AnimationOptimizer) {
     EXPECT_FLOAT_EQ(rotations[0].value.w, 1.f);  // Track 0 begin.
     EXPECT_FLOAT_EQ(rotations[1].value.w, .9998477f);  // Track 0 end.
   }
+
+  ozz::memory::default_allocator()->Delete(skeleton);
 }

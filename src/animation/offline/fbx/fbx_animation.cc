@@ -105,7 +105,7 @@ bool ExtractAnimation(FbxSceneLoader* _scene_loader,
 
       // Get joint's bind pose.
       const ozz::math::Transform& bind_pose =
-        ozz::animation::GetJointBindPose(_skeleton, i);
+        ozz::animation::GetJointLocalBindPose(_skeleton, i);
 
       const RawAnimation::TranslationKey tkey = {0.f, bind_pose.translation};
       track.translations.push_back(tkey);

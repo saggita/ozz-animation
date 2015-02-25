@@ -430,7 +430,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     if (optimize_) {
       // Optimzes the raw animation.
       ozz::animation::offline::RawAnimation optimized_animation;
-      if (!optimizer_(raw_animation_, &optimized_animation)) {
+      if (!optimizer_(raw_animation_, skeleton_, &optimized_animation)) {
         return false;
       }
       // Builds runtime aniamtion from the optimized one.

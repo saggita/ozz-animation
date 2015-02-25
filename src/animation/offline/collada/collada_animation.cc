@@ -1153,7 +1153,7 @@ bool ExtractAnimation(const AnimationVisitor& _animation_visitor,
       
       // Get joint's bind pose.
       const ozz::math::Transform& bind_pose =
-        ozz::animation::GetJointBindPose(_skeleton, i);
+        ozz::animation::GetJointLocalBindPose(_skeleton, i);
 
       PushKeys(bind_pose, 0.f, &output_track);
     } else {  // Uses animated transformations.

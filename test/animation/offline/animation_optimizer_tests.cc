@@ -167,6 +167,8 @@ TEST(Optimize, AnimationOptimizer) {
     input.tracks[0].rotations.push_back(key);
   }
 
+  ASSERT_TRUE(input.Validate());
+
   // Builds animation with very little tolerance.
   {
     optimizer.translation_tolerance = 0.f;
@@ -177,7 +179,7 @@ TEST(Optimize, AnimationOptimizer) {
 
     const RawAnimation::JointTrack::Translations& translations =
       output.tracks[0].translations;
-    EXPECT_EQ(translations.size(), 8u);
+    ASSERT_EQ(translations.size(), 8u);
     EXPECT_FLOAT_EQ(translations[0].value.x, 0.f);  // Track 0 begin.
     EXPECT_FLOAT_EQ(translations[1].value.x, .1f);  // Track 0 at .25f.
     EXPECT_FLOAT_EQ(translations[2].value.x, 0.f);  // Track 0 at .5f.
@@ -189,7 +191,7 @@ TEST(Optimize, AnimationOptimizer) {
 
     const RawAnimation::JointTrack::Rotations& rotations =
       output.tracks[0].rotations;
-    EXPECT_EQ(rotations.size(), 3u);
+    ASSERT_EQ(rotations.size(), 3u);
     EXPECT_FLOAT_EQ(rotations[0].value.w, 1.f);  // Track 0 begin.
     EXPECT_FLOAT_EQ(rotations[1].value.w, .9999539f);  // Track 0 at .5f.
     EXPECT_FLOAT_EQ(rotations[2].value.w, .9998477f);  // Track 0 end.
@@ -204,7 +206,7 @@ TEST(Optimize, AnimationOptimizer) {
 
     const RawAnimation::JointTrack::Translations& translations =
       output.tracks[0].translations;
-    EXPECT_EQ(translations.size(), 5u);
+    ASSERT_EQ(translations.size(), 5u);
     EXPECT_FLOAT_EQ(translations[0].value.x, 0.f);  // Track 0 begin.
     EXPECT_FLOAT_EQ(translations[1].value.x, .1f);  // Track 0 at .25f.
     EXPECT_FLOAT_EQ(translations[2].value.x, 0.f);  // Track 0 at .5f.
@@ -213,9 +215,158 @@ TEST(Optimize, AnimationOptimizer) {
 
     const RawAnimation::JointTrack::Rotations& rotations =
       output.tracks[0].rotations;
-    EXPECT_EQ(rotations.size(), 2u);
+    ASSERT_EQ(rotations.size(), 2u);
     EXPECT_FLOAT_EQ(rotations[0].value.w, 1.f);  // Track 0 begin.
     EXPECT_FLOAT_EQ(rotations[1].value.w, .9998477f);  // Track 0 end.
+  }
+
+  ozz::memory::default_allocator()->Delete(skeleton);
+}
+
+TEST(OptimizeHierarchical, AnimationOptimizer) {
+  // Prepares a skeleton.
+  RawSkeleton raw_skeleton;
+  raw_skeleton.roots.resize(1);
+  raw_skeleton.roots[0].children.resize(1);
+  raw_skeleton.roots[0].children[0].children.resize(1);
+  SkeletonBuilder skeleton_builder;
+  Skeleton* skeleton = skeleton_builder(raw_skeleton);
+  ASSERT_TRUE(skeleton != NULL);
+
+  AnimationOptimizer optimizer;
+
+  RawAnimation input;
+  input.duration = 1.f;
+  input.tracks.resize(3);
+
+  // Translations on track 0.
+  {
+    RawAnimation::TranslationKey key = {
+      0.f, ozz::math::Float3(0.f, 0.f, 0.f)};
+    input.tracks[0].translations.push_back(key);
+  }
+  {
+    RawAnimation::TranslationKey key = {
+      .1f, ozz::math::Float3(1.f, 0.f, 0.f)};
+    input.tracks[0].translations.push_back(key);
+  }
+  {
+    RawAnimation::TranslationKey key = {
+      .2f, ozz::math::Float3(2.f, 0.f, 0.f)};
+    input.tracks[0].translations.push_back(key);
+  }
+  {
+    RawAnimation::TranslationKey key = {
+      .3f, ozz::math::Float3(3.001f, 0.f, 0.f)};  // Creates an error.
+    input.tracks[0].translations.push_back(key);
+  }
+  {
+    RawAnimation::TranslationKey key = {
+      .4f, ozz::math::Float3(4.f, 0.f, 0.f)};
+    input.tracks[0].translations.push_back(key);
+  }
+
+  // Rotations on track 0.
+  {
+    RawAnimation::RotationKey key = {
+      0.f, ozz::math::Quaternion(0.f, 0.f, 0.f, 1.f)};
+    input.tracks[0].rotations.push_back(key);
+  }
+  {
+    RawAnimation::RotationKey key = {
+      .1f, ozz::math::Quaternion(0.f, 0.f, .70710678118654f, .70710678118654f)};
+    input.tracks[0].rotations.push_back(key);
+  }
+  {
+    RawAnimation::RotationKey key = {
+      .2f, ozz::math::Quaternion(0.f, 0.f, 1.f, 0.f)};
+    input.tracks[0].rotations.push_back(key);
+  }
+  {
+    RawAnimation::RotationKey key = {
+      .3f, ozz::math::Quaternion(0.f, 0.f, .70710670f, .70710686237308f)};
+    input.tracks[0].rotations.push_back(key);
+  }
+  {
+    RawAnimation::RotationKey key = {
+      .4f, ozz::math::Quaternion(0.f, 0.f, 0.f, 1.f)};
+    input.tracks[0].rotations.push_back(key);
+  }
+
+  // Scales on track 0.
+  {
+    RawAnimation::ScaleKey key = {
+      0.f, ozz::math::Float3(0.f, 1.f, 1.f)};
+    input.tracks[0].scales.push_back(key);
+  }
+  {
+    RawAnimation::ScaleKey key = {
+      .1f, ozz::math::Float3(1.f, 1.f, 1.f)};
+    input.tracks[0].scales.push_back(key);
+  }
+  {
+    RawAnimation::ScaleKey key = {
+      .2f, ozz::math::Float3(2.f, 1.f, 1.f)};
+    input.tracks[0].scales.push_back(key);
+  }
+  {
+    RawAnimation::ScaleKey key = {
+      .3f, ozz::math::Float3(3.001f, 1.f, 1.f)};
+    input.tracks[0].scales.push_back(key);
+  }
+  {
+    RawAnimation::ScaleKey key = {
+      .4f, ozz::math::Float3(4.f, 1.f, 1.f)};
+    input.tracks[0].scales.push_back(key);
+  }
+
+  // Translations on track 1 have a big length which impact rotation
+  // optimizations.
+  {
+    RawAnimation::TranslationKey key = {
+      0.f, ozz::math::Float3(0.f, 0.f, 1000.f)};
+    input.tracks[1].translations.push_back(key);
+  }
+
+  // Scales on track 2 have a big scale which impact translation
+  // optimizations.
+  {
+    RawAnimation::ScaleKey key = {
+      0.f, ozz::math::Float3(10.f, 100.f, 1000.f)};
+    input.tracks[2].scales.push_back(key);
+  }
+
+  ASSERT_TRUE(input.Validate());
+
+  // Builds animation with very default tolerance.
+  {
+    RawAnimation output;
+    ASSERT_TRUE(optimizer(input, *skeleton, &output));
+    EXPECT_EQ(output.num_tracks(), 3);
+
+    const RawAnimation::JointTrack::Translations& translations =
+      output.tracks[0].translations;
+    ASSERT_EQ(translations.size(), 4u);
+    EXPECT_FLOAT_EQ(translations[0].value.x, 0.f);
+    EXPECT_FLOAT_EQ(translations[1].value.x, 2.f);
+    EXPECT_FLOAT_EQ(translations[2].value.x, 3.001f);
+    EXPECT_FLOAT_EQ(translations[3].value.x, 4.f);
+
+    const RawAnimation::JointTrack::Rotations& rotations =
+      output.tracks[0].rotations;
+    ASSERT_EQ(rotations.size(), 4u);
+    EXPECT_FLOAT_EQ(rotations[0].value.w, 1.f);
+    EXPECT_FLOAT_EQ(rotations[1].value.w, 0.f);
+    EXPECT_FLOAT_EQ(rotations[2].value.w, .70710686237308f);
+    EXPECT_FLOAT_EQ(rotations[3].value.w, 1.f);
+    
+    const RawAnimation::JointTrack::Scales& scales =
+      output.tracks[0].scales;
+    ASSERT_EQ(rotations.size(), 4u);
+    EXPECT_FLOAT_EQ(scales[0].value.x, 0.f);
+    EXPECT_FLOAT_EQ(scales[1].value.x, 2.f);
+    EXPECT_FLOAT_EQ(scales[2].value.x, 3.001f);
+    EXPECT_FLOAT_EQ(scales[3].value.x, 4.f);
   }
 
   ozz::memory::default_allocator()->Delete(skeleton);

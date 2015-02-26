@@ -248,11 +248,11 @@ int AnimationConverter::operator()(int _argc, const char** _argv) {
   bool imported =
     Import(OPTIONS_file, *skeleton, OPTIONS_sampling_rate, &raw_animation);
 
-  // No need for the skeleton anymore.
-  ozz::memory::default_allocator()->Delete(skeleton);
   if (!imported) {
     ozz::log::Err() << "Failed to import file \"" << OPTIONS_file << "\"" <<
       std::endl;
+    // No need for the skeleton anymore.
+    ozz::memory::default_allocator()->Delete(skeleton);
     return EXIT_FAILURE;
   }
 
@@ -275,6 +275,9 @@ int AnimationConverter::operator()(int _argc, const char** _argv) {
     // Brings data back to the raw animation.
     raw_animation = raw_optimized_animation;
   }
+
+  // No need for the skeleton anymore.
+  ozz::memory::default_allocator()->Delete(skeleton);
 
   // Builds runtime animation.
   ozz::animation::Animation* animation = NULL;

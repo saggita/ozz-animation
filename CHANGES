@@ -1,6 +1,9 @@
 Release version 0.7.3.----------------------------------------------------------
 
  # Library
+
+!!! sample/optimize/cmakelists -> change fbx2anim back to dae2anim
+
   - [animation] Improves quaternion compression scheme by quantizing the 3
   smallest components of the quaternion, instead of the 3 firsts. This improves
   numerical accuracy when the restored component is small. It also allows to

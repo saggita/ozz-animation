@@ -2,7 +2,7 @@
 add_custom_command(
   DEPENDS "${CMAKE_CURRENT_LIST_DIR}/README"
           "${ozz_media_directory}/collada/alain/skeleton.dae"
-          "${ozz_media_directory}/collada/alain/atlas.dae"
+          "${ozz_media_directory}/collada/alain/walk.dae"
           dae2skel
           dae2anim
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/README"
@@ -16,7 +16,7 @@ add_custom_command(
   COMMAND fbx2anim
     "--raw"
     "--nooptimize"
-    "--file=${ozz_media_directory}/fbx/alain/atlas.fbx"
+    "--file=${ozz_media_directory}/collada/alain/walk.dae"
     "--skeleton=${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
     "--animation=${CMAKE_CURRENT_BINARY_DIR}/media/raw_animation.ozz")
 

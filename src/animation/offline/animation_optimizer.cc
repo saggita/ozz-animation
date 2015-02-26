@@ -38,6 +38,7 @@
 #include "ozz/animation/offline/raw_animation.h"
 
 #include "ozz/animation/runtime/skeleton.h"
+#include "ozz/animation/runtime/skeleton_utils.h"
 
 namespace ozz {
 namespace animation {
@@ -52,18 +53,73 @@ AnimationOptimizer::AnimationOptimizer()
 
 namespace {
 
+struct JointSpec {
+  float length;
+  float scale;
+};
+
+typedef ozz::Vector<JointSpec>::Std JointSpecs;
+
 typedef ozz::Vector<float>::Std BoneLengths;
+
+float Iter(const Skeleton& _skeleton,
+           uint16_t _joint,
+           JointSpecs* _joint_specs,
+           BoneLengths* _lengths) {
+
+  const Skeleton::JointProperties* properties = _skeleton.joint_properties().begin;
+
+  // Applies parent's scale to this joint.
+  uint16_t parent = properties[_joint].parent;
+  if (parent != Skeleton::kNoParentIndex) {
+    _joint_specs->at(_joint).length *= _joint_specs->at(parent).scale;
+    _joint_specs->at(_joint).scale *= _joint_specs->at(parent).scale;
+  }
+
+  if (properties[_joint].is_leaf) {
+    // Set leaf length to 0, as track's own tolerance checks are enough for a
+    // leaf.
+    _lengths->at(_joint) = 0.f;
+  } else {
+    // Find first child.
+    uint16_t child = _joint + 1;
+    for (;
+         child < _skeleton.num_joints() && properties[child].parent != _joint;
+         ++child) {
+    }
+    assert(properties[child].parent == _joint);
+
+    // Now iterate childs.
+    for (;
+         child < _skeleton.num_joints() && properties[child].parent == _joint;
+         ++child) {
+
+      // Entering each child.
+      float len = Iter(_skeleton, child, _joint_specs, _lengths);
+
+      // Accumulated each child length to this joint.
+      _lengths->at(_joint) = math::Max(_lengths->at(_joint), len);
+    }
+  }
+
+  // Returns accumulated length for this joint.
+  return _lengths->at(_joint) + _joint_specs->at(_joint).length;
+}
 
 void BuildBoneLength(const RawAnimation& _animation,
                      const Skeleton& _skeleton,
                      BoneLengths* _lengths) {
   assert(_animation.num_tracks() == _skeleton.num_joints());
 
+  // Early out if no joint.
+  if (_animation.num_tracks() == 0) {
+    return;
+  }
+
   // Extracts maximum translations and scales for each track.
-  ozz::Vector<float>::Std lengths;
-  ozz::Vector<float>::Std scales;
-  lengths.resize(_animation.tracks.size());
-  scales.resize(_animation.tracks.size());
+  JointSpecs joint_specs;
+  joint_specs.resize(_animation.tracks.size());
+  _lengths->resize(_animation.tracks.size(), 0.f);
 
   for (size_t i = 0; i < _animation.tracks.size(); ++i) {
     const RawAnimation::JointTrack& track = _animation.tracks[i];
@@ -72,7 +128,7 @@ void BuildBoneLength(const RawAnimation& _animation,
     for (size_t j = 0; j < track.translations.size(); ++j) {
       max_length = math::Max(max_length, Length(track.translations[j].value));
     }
-    lengths[i] = max_length;
+    joint_specs[i].length = max_length;
 
     float max_scale = 0.f;
     if (track.scales.size() != 0) {
@@ -84,37 +140,19 @@ void BuildBoneLength(const RawAnimation& _animation,
     } else {
       max_scale = 1.f;
     }
-    scales[i] = max_scale;
+    joint_specs[i].scale = max_scale;
   }
 
-  // Iterates hierarchy onward.
-  // Applies parent scale to the lengths and scales arrays.
-  for (int i = 0; i < _skeleton.num_joints(); ++i) {
-    uint16_t parent = _skeleton.joint_properties()[i].parent;
-    if (parent != Skeleton::kNoParentIndex) {
-      lengths[i] *= scales[parent];
-      scales[i] *= scales[parent];
-    }
+  // Iterates all skeleton roots.
+  for (uint16_t root = 0;
+       root < _skeleton.num_joints() &&
+       _skeleton.joint_properties()[root].parent == Skeleton::kNoParentIndex;
+        ++root) {
+    // Entering each root.
+    Iter(_skeleton, root, &joint_specs, _lengths);
   }
 
-  // Iterates hierarchy backward, to accumulate child's length.
-  _lengths->resize(_skeleton.num_joints(), 0);
-  for (int i = _skeleton.num_joints() - 1; i >= 0; --i) {
-    uint16_t parent = _skeleton.joint_properties()[i].parent;
-
-    // Stores max child length for each parent.
-    if (parent != Skeleton::kNoParentIndex) {
-      _lengths->at(parent) = math::Max(_lengths->at(parent), _lengths->at(i));
-
-      // Stores max child length for each parent.
-      uint16_t grand_parent = _skeleton.joint_properties()[parent].parent;
-      if (grand_parent != Skeleton::kNoParentIndex) {
-        _lengths->at(grand_parent) =
-          math::Max(_lengths->at(grand_parent),
-                    lengths[parent] + _lengths->at(i));
-      }
-    }
-  }
+  assert(_lengths->size());
 }
 
 // Copy _src keys to _dest but except the ones that can be interpolated.
@@ -205,8 +243,6 @@ math::Float3 LerpScale(const math::Float3& _a,
   return math::Lerp(_a, _b, _alpha);
 }
 
-
-
 }  // namespace
 
 bool AnimationOptimizer::operator()(const RawAnimation& _input,
@@ -222,7 +258,7 @@ bool AnimationOptimizer::operator()(const RawAnimation& _input,
   if (!_input.Validate()) {
     return false;
   }
-  /*
+  
   // Validates the skeleton matches the animation.
   if (_input.num_tracks() != _skeleton.num_joints()) {
     return false;
@@ -231,7 +267,7 @@ bool AnimationOptimizer::operator()(const RawAnimation& _input,
   // First computes bone lengths, that will be used when filtering.
   BoneLengths lengths;
   BuildBoneLength(_input, _skeleton, &lengths);
-  */
+  
   // Rebuilds output animation.
   _output->duration = _input.duration;
   int num_tracks = _input.num_tracks();

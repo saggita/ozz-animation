@@ -283,8 +283,8 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
     input.tracks[0].rotations.push_back(key);
   }
   {
-    RawAnimation::RotationKey key = {
-      .3f, ozz::math::Quaternion(0.f, 0.f, .70710670f, .70710686237308f)};
+    RawAnimation::RotationKey key = {  // Creates an error.
+      .3f, ozz::math::Quaternion(0.f, 0.f, .707105f, .70710856236860f)};
     input.tracks[0].rotations.push_back(key);
   }
   {
@@ -319,21 +319,21 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
       .4f, ozz::math::Float3(4.f, 1.f, 1.f)};
     input.tracks[0].scales.push_back(key);
   }
-
-  // Translations on track 1 have a big length which impact rotation
-  // optimizations.
-  {
-    RawAnimation::TranslationKey key = {
-      0.f, ozz::math::Float3(0.f, 0.f, 1000.f)};
-    input.tracks[1].translations.push_back(key);
-  }
-
-  // Scales on track 2 have a big scale which impact translation
+  
+  // Scales on track 1 have a big scale which impacts translation
   // optimizations.
   {
     RawAnimation::ScaleKey key = {
-      0.f, ozz::math::Float3(10.f, 100.f, 1000.f)};
-    input.tracks[2].scales.push_back(key);
+      0.f, ozz::math::Float3(10.f, 10.f, 10.f)};
+    input.tracks[1].scales.push_back(key);
+  }
+
+  // Translations on track 2 have a big length which impacts rotation
+  // optimizations.
+  {
+    RawAnimation::TranslationKey key = {
+      0.f, ozz::math::Float3(0.f, 0.f, 10.f)};
+    input.tracks[2].translations.push_back(key);
   }
 
   ASSERT_TRUE(input.Validate());
@@ -346,20 +346,18 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
 
     const RawAnimation::JointTrack::Translations& translations =
       output.tracks[0].translations;
-    ASSERT_EQ(translations.size(), 4u);
+    ASSERT_EQ(translations.size(), 2u);
     EXPECT_FLOAT_EQ(translations[0].value.x, 0.f);
-    EXPECT_FLOAT_EQ(translations[1].value.x, 2.f);
-    EXPECT_FLOAT_EQ(translations[2].value.x, 3.001f);
-    EXPECT_FLOAT_EQ(translations[3].value.x, 4.f);
+    EXPECT_FLOAT_EQ(translations[1].value.x, 4.f);
 
     const RawAnimation::JointTrack::Rotations& rotations =
       output.tracks[0].rotations;
     ASSERT_EQ(rotations.size(), 4u);
     EXPECT_FLOAT_EQ(rotations[0].value.w, 1.f);
     EXPECT_FLOAT_EQ(rotations[1].value.w, 0.f);
-    EXPECT_FLOAT_EQ(rotations[2].value.w, .70710686237308f);
+    EXPECT_FLOAT_EQ(rotations[2].value.w, .70710856236860f);
     EXPECT_FLOAT_EQ(rotations[3].value.w, 1.f);
-    
+
     const RawAnimation::JointTrack::Scales& scales =
       output.tracks[0].scales;
     ASSERT_EQ(rotations.size(), 4u);

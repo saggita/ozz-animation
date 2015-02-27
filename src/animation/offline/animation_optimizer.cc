@@ -161,6 +161,8 @@ void Filter(const _RawTrack& _src,
             const _Comparator& _comparator,
             const _Lerp& _lerp,
             float _tolerance,
+            float _hierarchical_tolerance,
+            float _hierarchy_length,
             _RawTrack* _dest) {
   _dest->clear();  // Reset and reserve destination.
   _dest->reserve(_src.size());
@@ -183,7 +185,9 @@ void Filter(const _RawTrack& _src,
         assert(alpha >= 0.f && alpha <= 1.f);
         if (!_comparator(_lerp(left.value, right.value, alpha),
                          test.value,
-                         _tolerance)) {
+                         _tolerance,
+                         _hierarchical_tolerance,
+                         _hierarchy_length)) {
           _dest->push_back(_src[i]);
           last_src_pushed = i;
           break;
@@ -197,7 +201,11 @@ void Filter(const _RawTrack& _src,
 // Translation filtering comparator.
 bool CompareTranslation(const math::Float3& _a,
                         const math::Float3& _b,
-                        float _tolerance) {
+                        float _tolerance,
+                        float _hierarchical_tolerance,
+                        float _hierarchy_length) {
+  (void)_hierarchical_tolerance;  // No effect on translation.
+  (void)_hierarchy_length;
   return Compare(_a, _b, _tolerance);
 }
 
@@ -209,30 +217,62 @@ math::Float3 LerpTranslation(const math::Float3& _a,
   return math::Lerp(_a, _b, _alpha);
 }
 
+// Implements the rotation of a vector by a quaterion.
+math::Float3 Rotate(const math::Quaternion& _q, const math::Float3& _v) {
+  // Extracts the vector part of the quaternion.
+  math::Float3 u(_q.x, _q.y, _q.z);
+
+  // Extracts the scalar part of the quaternion.
+  const float s = _q.w;
+
+  // Does the math.
+  return math::Float3(2.0f * Dot(u, _v)) * u +
+         math::Float3((s * s - Dot(u, u))) * _v +
+         math::Float3(2.0f * s) * Cross(u, _v);
+}
+
 // Rotation filtering comparator.
 bool CompareRotation(const math::Quaternion& _a,
                      const math::Quaternion& _b,
-                     float _tolerance) {
-  return Compare(_a, _b, _tolerance);
+                     float _tolerance,
+                     float _hierarchical_tolerance,
+                     float _hierarchy_length) {
+  if (!Compare(_a, _b, _tolerance)) {
+    return false;
+  }
+
+  // Compute the position of the end of the hierarchy, in both cases _a and _b.
+  // v' = q * v * q-1
+  const math::Float3 v(sqrt(_hierarchy_length * _hierarchy_length / 3.f));
+  const math::Float3 a(Rotate(_a, v));
+  const math::Float3 b(Rotate(_b, v));
+  return Compare(a, b, _hierarchical_tolerance);
 }
 
 // Rotation interpolation method.
 // This must be the same Lerp as the one used by the sampling job.
+// The goal is to take the shortest path between _a and _b. This code replicates
+// this behavior that is actually not done at runtime, but when building the
+// animation.
 math::Quaternion LerpRotation(const math::Quaternion& _a,
                               const math::Quaternion& _b,
                               float _alpha) {
   const float dot = _a.x * _b.x + _a.y * _b.y + _a.z * _b.z + _a.w * _b.w;
-  if (dot < 0.f) {
-    return math::NLerp(_a, -_b, _alpha);  // Q an -Q are the same rotation.
-  }
-  return math::NLerp(_a, _b, _alpha);
+  return math::NLerp(_a, dot < 0.f ? -_b : _b, _alpha);
 }
 
 // Scale filtering comparator.
 bool CompareScale(const math::Float3& _a,
                   const math::Float3& _b,
-                  float _tolerance) {
-  return Compare(_a, _b, _tolerance);
+                  float _tolerance,
+                  float _hierarchical_tolerance,
+                  float _hierarchy_length) {
+  if (!Compare(_a, _b, _tolerance)) {
+    return false;
+  }
+  // Compute the position of the end of the hierarchy, in both cases _a and _b.
+  const math::Float3 l(_hierarchy_length);
+  return Compare(_a * l, _b * l, _hierarchical_tolerance);
 }
 
 // Scale interpolation method.
@@ -273,14 +313,23 @@ bool AnimationOptimizer::operator()(const RawAnimation& _input,
   int num_tracks = _input.num_tracks();
   _output->tracks.resize(num_tracks);
   for (int i = 0; i < num_tracks; ++i) {
+
+    // Hierarcical tolearance is the maximum error allowed at the end of the
+    // hierarchy, which is thus the translation_tolerance.
+    const float hierarchy_length = lengths[i];
+    const float hierarchical_tolerance = translation_tolerance;
+
     Filter(_input.tracks[i].translations,
            CompareTranslation, LerpTranslation, translation_tolerance,
+           hierarchical_tolerance, hierarchy_length,
            &_output->tracks[i].translations);
     Filter(_input.tracks[i].rotations,
            CompareRotation, LerpRotation, rotation_tolerance,
+           hierarchical_tolerance, hierarchy_length,
            &_output->tracks[i].rotations);
     Filter(_input.tracks[i].scales,
            CompareScale, LerpScale, scale_tolerance,
+           hierarchical_tolerance, hierarchy_length,
            &_output->tracks[i].scales);
   }
   // Output animation is always valid.

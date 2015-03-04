@@ -69,6 +69,8 @@ class AnimationOptimizer {
 
   // Scale optimization tolerance, ie: the norm of the difference of two scales.
   float scale_tolerance;
+
+  bool hierarchical;
 };
 }  // offline
 }  // animation

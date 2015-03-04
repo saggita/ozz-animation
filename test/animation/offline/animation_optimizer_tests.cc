@@ -180,21 +180,21 @@ TEST(Optimize, AnimationOptimizer) {
     const RawAnimation::JointTrack::Translations& translations =
       output.tracks[0].translations;
     ASSERT_EQ(translations.size(), 8u);
-    EXPECT_FLOAT_EQ(translations[0].value.x, 0.f);  // Track 0 begin.
-    EXPECT_FLOAT_EQ(translations[1].value.x, .1f);  // Track 0 at .25f.
-    EXPECT_FLOAT_EQ(translations[2].value.x, 0.f);  // Track 0 at .5f.
-    EXPECT_FLOAT_EQ(translations[3].value.x, .1f);  // Track 0 at .625f.
-    EXPECT_FLOAT_EQ(translations[4].value.x, .21f);  // Track 0 at .75f.
-    EXPECT_FLOAT_EQ(translations[5].value.x, .29f);  // Track 0 at .875f.
-    EXPECT_FLOAT_EQ(translations[6].value.x, .4f);  // Track 0 ~end.
-    EXPECT_FLOAT_EQ(translations[7].value.x, 0.f);  // Track 0 end.*/
+    EXPECT_FLOAT_EQ(translations[0].time, 0.f);  // Track 0 begin.
+    EXPECT_FLOAT_EQ(translations[1].time, .25f);  // Track 0 at .25f.
+    EXPECT_FLOAT_EQ(translations[2].time, .5f);  // Track 0 at .5f.
+    EXPECT_FLOAT_EQ(translations[3].time, .625f);  // Track 0 at .625f.
+    EXPECT_FLOAT_EQ(translations[4].time, .75f);  // Track 0 at .75f.
+    EXPECT_FLOAT_EQ(translations[5].time, .875f);  // Track 0 at .875f.
+    EXPECT_FLOAT_EQ(translations[6].time, .9999f);  // Track 0 ~end.
+    EXPECT_FLOAT_EQ(translations[7].time, 1.f);  // Track 0 end.*/
 
     const RawAnimation::JointTrack::Rotations& rotations =
       output.tracks[0].rotations;
     ASSERT_EQ(rotations.size(), 3u);
-    EXPECT_FLOAT_EQ(rotations[0].value.w, 1.f);  // Track 0 begin.
-    EXPECT_FLOAT_EQ(rotations[1].value.w, .9999539f);  // Track 0 at .5f.
-    EXPECT_FLOAT_EQ(rotations[2].value.w, .9998477f);  // Track 0 end.
+    EXPECT_FLOAT_EQ(rotations[0].time, 0.f);  // Track 0 begin.
+    EXPECT_FLOAT_EQ(rotations[1].time, .5f);  // Track 0 at .5f.
+    EXPECT_FLOAT_EQ(rotations[2].time, 1.f);  // Track 0 end.
   }
   {
     // Rebuilds with tolerance.
@@ -207,17 +207,17 @@ TEST(Optimize, AnimationOptimizer) {
     const RawAnimation::JointTrack::Translations& translations =
       output.tracks[0].translations;
     ASSERT_EQ(translations.size(), 5u);
-    EXPECT_FLOAT_EQ(translations[0].value.x, 0.f);  // Track 0 begin.
-    EXPECT_FLOAT_EQ(translations[1].value.x, .1f);  // Track 0 at .25f.
-    EXPECT_FLOAT_EQ(translations[2].value.x, 0.f);  // Track 0 at .5f.
-    EXPECT_FLOAT_EQ(translations[3].value.x, 0.4f);  // Track 0 at ~1.f.
-    EXPECT_FLOAT_EQ(translations[4].value.x, 0.f);  // Track 0 end.
+    EXPECT_FLOAT_EQ(translations[0].time, 0.f);  // Track 0 begin.
+    EXPECT_FLOAT_EQ(translations[1].time, .25f);  // Track 0 at .25f.
+    EXPECT_FLOAT_EQ(translations[2].time, .5f);  // Track 0 at .5f.
+    EXPECT_FLOAT_EQ(translations[3].time, .9999f);  // Track 0 at ~1.f.
+    EXPECT_FLOAT_EQ(translations[4].time, 1.f);  // Track 0 end.
 
     const RawAnimation::JointTrack::Rotations& rotations =
       output.tracks[0].rotations;
     ASSERT_EQ(rotations.size(), 2u);
-    EXPECT_FLOAT_EQ(rotations[0].value.w, 1.f);  // Track 0 begin.
-    EXPECT_FLOAT_EQ(rotations[1].value.w, .9998477f);  // Track 0 end.
+    EXPECT_FLOAT_EQ(rotations[0].time, 0.f);  // Track 0 begin.
+    EXPECT_FLOAT_EQ(rotations[1].time, 1.f);  // Track 0 end.
   }
 
   ozz::memory::default_allocator()->Delete(skeleton);
@@ -269,27 +269,27 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
   // Rotations on track 0.
   {
     RawAnimation::RotationKey key = {
-      0.f, ozz::math::Quaternion(0.f, 0.f, 0.f, 1.f)};
+      0.f, ozz::math::Quaternion::FromEuler(ozz::math::Float3(0.f, 0.f, 0.f))};
     input.tracks[0].rotations.push_back(key);
   }
   {
     RawAnimation::RotationKey key = {
-      .1f, ozz::math::Quaternion(0.f, 0.f, .70710678118654f, .70710678118654f)};
+      .1f, -ozz::math::Quaternion::FromEuler(ozz::math::Float3(ozz::math::kPi_4, 0.f, 0.f))};
     input.tracks[0].rotations.push_back(key);
   }
   {
     RawAnimation::RotationKey key = {
-      .2f, ozz::math::Quaternion(0.f, 0.f, 1.f, 0.f)};
+      .2f, ozz::math::Quaternion::FromEuler(ozz::math::Float3(ozz::math::kPi_2, 0.f, 0.f))};
     input.tracks[0].rotations.push_back(key);
   }
   {
     RawAnimation::RotationKey key = {  // Creates an error.
-      .3f, ozz::math::Quaternion(0.f, 0.f, .707105f, .70710856236860f)};
+      .3f, ozz::math::Quaternion::FromEuler(ozz::math::Float3(ozz::math::kPi_4 + ozz::math::kPi / 100.f, 0.f, 0.f))};
     input.tracks[0].rotations.push_back(key);
   }
   {
     RawAnimation::RotationKey key = {
-      .4f, ozz::math::Quaternion(0.f, 0.f, 0.f, 1.f)};
+      .4f, ozz::math::Quaternion::FromEuler(ozz::math::Float3(0.f, 0.f, 0.f))};
     input.tracks[0].rotations.push_back(key);
   }
 
@@ -324,7 +324,7 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
   // optimizations.
   {
     RawAnimation::ScaleKey key = {
-      0.f, ozz::math::Float3(10.f, 10.f, 10.f)};
+      0.f, ozz::math::Float3(2.f, 2.f, 2.f)};
     input.tracks[1].scales.push_back(key);
   }
 
@@ -332,7 +332,7 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
   // optimizations.
   {
     RawAnimation::TranslationKey key = {
-      0.f, ozz::math::Float3(0.f, 0.f, 10.f)};
+      0.f, ozz::math::Float3(0.f, 0.f, 2.f)};
     input.tracks[2].translations.push_back(key);
   }
 
@@ -347,24 +347,24 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
     const RawAnimation::JointTrack::Translations& translations =
       output.tracks[0].translations;
     ASSERT_EQ(translations.size(), 2u);
-    EXPECT_FLOAT_EQ(translations[0].value.x, 0.f);
-    EXPECT_FLOAT_EQ(translations[1].value.x, 4.f);
+    EXPECT_FLOAT_EQ(translations[0].time, 0.f);
+    EXPECT_FLOAT_EQ(translations[1].time, .4f);
 
     const RawAnimation::JointTrack::Rotations& rotations =
       output.tracks[0].rotations;
     ASSERT_EQ(rotations.size(), 4u);
-    EXPECT_FLOAT_EQ(rotations[0].value.w, 1.f);
-    EXPECT_FLOAT_EQ(rotations[1].value.w, 0.f);
-    EXPECT_FLOAT_EQ(rotations[2].value.w, .70710856236860f);
-    EXPECT_FLOAT_EQ(rotations[3].value.w, 1.f);
+    EXPECT_FLOAT_EQ(rotations[0].time, 0.f);
+    EXPECT_FLOAT_EQ(rotations[1].time, .2f);
+    EXPECT_FLOAT_EQ(rotations[2].time, .3f);
+    EXPECT_FLOAT_EQ(rotations[3].time, .4f);
 
     const RawAnimation::JointTrack::Scales& scales =
       output.tracks[0].scales;
     ASSERT_EQ(rotations.size(), 4u);
-    EXPECT_FLOAT_EQ(scales[0].value.x, 0.f);
-    EXPECT_FLOAT_EQ(scales[1].value.x, 2.f);
-    EXPECT_FLOAT_EQ(scales[2].value.x, 3.001f);
-    EXPECT_FLOAT_EQ(scales[3].value.x, 4.f);
+    EXPECT_FLOAT_EQ(scales[0].time, 0.f);
+    EXPECT_FLOAT_EQ(scales[1].time, .2f);
+    EXPECT_FLOAT_EQ(scales[2].time, .3f);
+    EXPECT_FLOAT_EQ(scales[3].time, .4f);
   }
 
   ozz::memory::default_allocator()->Delete(skeleton);

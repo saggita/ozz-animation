@@ -33,6 +33,7 @@
 #include <cstddef>
 #include <cassert>
 
+#include "ozz/base/maths/math_ex.h"
 #include "ozz/base/maths/math_constant.h"
 
 #include "ozz/animation/offline/raw_animation.h"
@@ -48,7 +49,8 @@ namespace offline {
 AnimationOptimizer::AnimationOptimizer()
   : translation_tolerance(1e-3f),  // 1 mm.
     rotation_tolerance(.1f * math::kPi / 180.f),  // 0.1 degree.
-    scale_tolerance(1e-3f) {  // 0.1%.
+    scale_tolerance(1e-3f),  // 0.1%.
+    hierarchical(true) {
 }
 
 namespace {
@@ -217,36 +219,23 @@ math::Float3 LerpTranslation(const math::Float3& _a,
   return math::Lerp(_a, _b, _alpha);
 }
 
-// Implements the rotation of a vector by a quaterion.
-math::Float3 Rotate(const math::Quaternion& _q, const math::Float3& _v) {
-  // Extracts the vector part of the quaternion.
-  math::Float3 u(_q.x, _q.y, _q.z);
-
-  // Extracts the scalar part of the quaternion.
-  const float s = _q.w;
-
-  // Does the math.
-  return math::Float3(2.0f * Dot(u, _v)) * u +
-         math::Float3((s * s - Dot(u, u))) * _v +
-         math::Float3(2.0f * s) * Cross(u, _v);
-}
-
 // Rotation filtering comparator.
 bool CompareRotation(const math::Quaternion& _a,
                      const math::Quaternion& _b,
                      float _tolerance,
                      float _hierarchical_tolerance,
                      float _hierarchy_length) {
-  if (!Compare(_a, _b, _tolerance)) {
+  // Compute the shortest unsigned angle between the 2 quaternions.
+  // diff_w is w component of a-1 * b.
+  const float diff_w = _a.x * _b.x + _a.y * _b.y + _a.z * _b.z + _a.w * _b.w;
+  const float angle = 2.f * std::acos(math::Min(fabs(diff_w), 1.f));
+  if (fabs(angle) > _tolerance) {
     return false;
   }
 
-  // Compute the position of the end of the hierarchy, in both cases _a and _b.
-  // v' = q * v * q-1
-  const math::Float3 v(sqrt(_hierarchy_length * _hierarchy_length / 3.f));
-  const math::Float3 a(Rotate(_a, v));
-  const math::Float3 b(Rotate(_b, v));
-  return Compare(a, b, _hierarchical_tolerance);
+  // Deduces the length of the opposite segment at a distance _hierarchy_length.
+  const float arc_length = std::sin(angle) * _hierarchy_length;
+  return fabs(arc_length) < _hierarchical_tolerance;
 }
 
 // Rotation interpolation method.
@@ -317,7 +306,7 @@ bool AnimationOptimizer::operator()(const RawAnimation& _input,
     // Hierarcical tolearance is the maximum error allowed at the end of the
     // hierarchy, which is thus the translation_tolerance.
     const float hierarchy_length = lengths[i];
-    const float hierarchical_tolerance = translation_tolerance;
+    const float hierarchical_tolerance = hierarchical ? translation_tolerance:10e16f;
 
     Filter(_input.tracks[i].translations,
            CompareTranslation, LerpTranslation, translation_tolerance,

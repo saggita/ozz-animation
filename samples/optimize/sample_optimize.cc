@@ -357,6 +357,8 @@ class OptimizeSampleApplication : public ozz::sample::Application {
         rebuild |= _im_gui->DoSlider(
           label, 0.f, .1f, &optimizer_.scale_tolerance, .3f, optimize_);
 
+        rebuild |= _im_gui->DoCheckBox("Hierarchical", &optimizer_.hierarchical);
+
         std::sprintf(label, "Animation size : %dKB",
           static_cast<int>(animation_rt_->size()>>10));
 
@@ -394,7 +396,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
         char szLabel[64];
         ozz::sample::Record::Statistics stats = error_record_.GetStatistics();
         static bool error_open = true;
-        ozz::sample::ImGui::OpenClose oc_stats(_im_gui, szLabel, &error_open);
+        ozz::sample::ImGui::OpenClose oc_stats(_im_gui, "Absolute error", &error_open);
         if (error_open) {
           std::sprintf(szLabel, "Absolute error: %.2f mm", *error_record_.cursor());
           _im_gui->DoGraph(

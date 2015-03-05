@@ -228,14 +228,14 @@ bool CompareRotation(const math::Quaternion& _a,
   // Compute the shortest unsigned angle between the 2 quaternions.
   // diff_w is w component of a-1 * b.
   const float diff_w = _a.x * _b.x + _a.y * _b.y + _a.z * _b.z + _a.w * _b.w;
-  const float angle = 2.f * std::acos(math::Min(fabs(diff_w), 1.f));
-  if (fabs(angle) > _tolerance) {
+  const float angle = 2.f * std::acos(math::Min(std::abs(diff_w), 1.f));
+  if (std::abs(angle) > _tolerance) {
     return false;
   }
 
   // Deduces the length of the opposite segment at a distance _hierarchy_length.
   const float arc_length = std::sin(angle) * _hierarchy_length;
-  return fabs(arc_length) < _hierarchical_tolerance;
+  return std::abs(arc_length) < _hierarchical_tolerance;
 }
 
 // Rotation interpolation method.

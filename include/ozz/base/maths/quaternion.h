@@ -120,14 +120,14 @@ OZZ_INLINE bool Compare(const math::Quaternion& _a,
   // Computes w component of a-1 * b.
   const float diff_w = _a.x * _b.x + _a.y * _b.y + _a.z * _b.z + _a.w * _b.w;
   // Converts w back to an angle.
-  const float angle = 2.f * std::acos(Min(fabs(diff_w), 1.f));
-  return fabs(angle) <= _tolerance;
+  const float angle = 2.f * std::acos(Min(std::abs(diff_w), 1.f));
+  return std::abs(angle) <= _tolerance;
 }
 
 // Returns true if _q is a normalized quaternion.
 OZZ_INLINE bool IsNormalized(const Quaternion& _q) {
   const float sq_len = _q.x * _q.x + _q.y * _q.y + _q.z * _q.z + _q.w * _q.w;
-  return fabs(sq_len - 1.f) < kNormalizationTolerance;
+  return std::abs(sq_len - 1.f) < kNormalizationTolerance;
 }
 
 // Returns the normalized quaternion _q.
@@ -264,7 +264,7 @@ OZZ_INLINE Quaternion SLerp(const Quaternion& _a,
   float cos_half_theta = _a.x * _b.x + _a.y * _b.y + _a.z * _b.z + _a.w * _b.w;
 
   // If _a=_b or _a=-_b then theta = 0 and we can return _a.
-  if (fabs(cos_half_theta) >= .999f) {
+  if (std::abs(cos_half_theta) >= .999f) {
     return _a;
   }
 

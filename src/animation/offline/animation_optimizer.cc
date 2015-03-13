@@ -37,6 +37,7 @@
 #include "ozz/base/maths/math_constant.h"
 
 #include "ozz/animation/offline/raw_animation.h"
+#include "ozz/animation/offline/raw_animation_utils.h"
 
 #include "ozz/animation/runtime/skeleton.h"
 #include "ozz/animation/runtime/skeleton_utils.h"
@@ -225,14 +226,6 @@ bool CompareTranslation(const math::Float3& _a,
   return Compare(_a * s, _b * s, _hierarchical_tolerance);
 }
 
-// Translation interpolation method.
-// This must be the same Lerp as the one used by the sampling job.
-math::Float3 LerpTranslation(const math::Float3& _a,
-                             const math::Float3& _b,
-                             float _alpha) {
-  return math::Lerp(_a, _b, _alpha);
-}
-
 // Rotation filtering comparator.
 bool CompareRotation(const math::Quaternion& _a,
                      const math::Quaternion& _b,
@@ -252,18 +245,6 @@ bool CompareRotation(const math::Quaternion& _a,
   return std::abs(arc_length) < _hierarchical_tolerance;
 }
 
-// Rotation interpolation method.
-// This must be the same Lerp as the one used by the sampling job.
-// The goal is to take the shortest path between _a and _b. This code replicates
-// this behavior that is actually not done at runtime, but when building the 
-// animation.
-math::Quaternion LerpRotation(const math::Quaternion& _a,
-                              const math::Quaternion& _b,
-                              float _alpha) {
-  const float dot = _a.x * _b.x + _a.y * _b.y + _a.z * _b.z + _a.w * _b.w;
-  return math::NLerp(_a, dot < 0.f ? -_b : _b, _alpha);
-}
-
 // Scale filtering comparator.
 bool CompareScale(const math::Float3& _a,
                   const math::Float3& _b,
@@ -277,15 +258,6 @@ bool CompareScale(const math::Float3& _a,
   const math::Float3 l(_hierarchy_length);
   return Compare(_a * l, _b * l, _hierarchical_tolerance);
 }
-
-// Scale interpolation method.
-// This must be the same Lerp as the one used by the sampling job.
-math::Float3 LerpScale(const math::Float3& _a,
-                       const math::Float3& _b,
-                       float _alpha) {
-  return math::Lerp(_a, _b, _alpha);
-}
-
 }  // namespace
 
 bool AnimationOptimizer::operator()(const RawAnimation& _input,

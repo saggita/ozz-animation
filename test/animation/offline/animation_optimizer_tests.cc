@@ -257,7 +257,7 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
   }
   {
     RawAnimation::TranslationKey key = {
-      .3f, ozz::math::Float3(3.001f, 0.f, 0.f)};  // Creates an error.
+      .3f, ozz::math::Float3(3.0009f, 0.f, 0.f)};  // Creates an error.
     input.tracks[0].translations.push_back(key);
   }
   {
@@ -324,7 +324,7 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
   // optimizations.
   {
     RawAnimation::ScaleKey key = {
-      0.f, ozz::math::Float3(2.f, 2.f, 2.f)};
+      0.f, ozz::math::Float3(3.f, 3.f, 3.f)};
     input.tracks[1].scales.push_back(key);
   }
 
@@ -334,6 +334,13 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
     RawAnimation::TranslationKey key = {
       0.f, ozz::math::Float3(0.f, 0.f, 2.f)};
     input.tracks[2].translations.push_back(key);
+  }
+  
+  // Push a scale on track 2.
+  {
+    RawAnimation::ScaleKey key = {
+      0.f, ozz::math::Float3(2.f, 2.f, 2.f)};
+    input.tracks[2].scales.push_back(key);
   }
 
   ASSERT_TRUE(input.Validate());
@@ -346,9 +353,11 @@ TEST(OptimizeHierarchical, AnimationOptimizer) {
 
     const RawAnimation::JointTrack::Translations& translations =
       output.tracks[0].translations;
-    ASSERT_EQ(translations.size(), 2u);
+    ASSERT_EQ(translations.size(), 4u);
     EXPECT_FLOAT_EQ(translations[0].time, 0.f);
-    EXPECT_FLOAT_EQ(translations[1].time, .4f);
+    EXPECT_FLOAT_EQ(translations[1].time, .2f);
+    EXPECT_FLOAT_EQ(translations[2].time, .3f);
+    EXPECT_FLOAT_EQ(translations[3].time, .4f);
 
     const RawAnimation::JointTrack::Rotations& rotations =
       output.tracks[0].rotations;

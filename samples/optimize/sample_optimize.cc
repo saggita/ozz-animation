@@ -158,7 +158,8 @@ bool LoadAnimation(const char* _filename,
   // Once the tag is validated, reading cannot fail.
   archive >> *_animation;
 
-  return true;
+  // Ensure animation is valid.
+  return _animation->Validate();
 }
 }  // namespace
 
@@ -283,7 +284,8 @@ class OptimizeSampleApplication : public ozz::sample::Application {
       return false;
     }
 
-    // Then convert AoS transforms to SoA transform array.
+    // Sample raw animation and converts AoS transforms to SoA transform array.
+    assert(_animation.Validate() && "Animation should be valid.");
     for (int i = 0; i < _animation.num_tracks(); i += 4) {
       ozz::math::SimdFloat4 translations[4];
       ozz::math::SimdFloat4 rotations[4];
@@ -293,6 +295,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
       // lower than 4.
       const int jmax = ozz::math::Min(_animation.num_tracks() - i, 4);
       for (int j = 0; j < jmax; ++j) {
+        // Samples raw animation.
         const ozz::math::Transform transform =
           SampleTrack(_animation.tracks[i + j], _time);
 
@@ -348,6 +351,7 @@ class OptimizeSampleApplication : public ozz::sample::Application {
     }
 
     // Imports offline animation from a binary file.
+    // Invalid animations are rejected by the load function.
     if (!LoadAnimation(OPTIONS_animation, &raw_animation_)) {
       return false;
     }

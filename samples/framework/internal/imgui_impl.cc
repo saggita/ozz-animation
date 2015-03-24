@@ -802,6 +802,10 @@ bool ImGuiImpl::DoSlider(const char* _label,
     pick_rect.left -= kWidgetCursorWidth / 2.f;
     pick_rect.width += kWidgetCursorWidth;
     ButtonLogic(pick_rect, auto_gen_id_, &hot, &active);
+
+    // A slider is active on lmb pressed, not released. It's different to the
+    // usual button behavior.
+    active &= inputs_.lmb_pressed;
   }
 
   // Render the scrollbar

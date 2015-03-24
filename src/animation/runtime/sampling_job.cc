@@ -233,7 +233,7 @@ void UpdateSoaTranslations(int _num_soa_tracks,
     cpnt[0] * cpnt[0] + cpnt[1] * cpnt[1] + cpnt[2] * cpnt[2] + cpnt[3] * cpnt[3];\
   const math::SimdFloat4 ww0 = math::Max(eps, one - dot);\
   const math::SimdFloat4 w0 = ww0 * math::RSqrtEst(ww0);\
-  /* Reapply 4th component's sign.*/\
+  /* Re-applies 4th component's sign.*/\
   const math::SimdInt4 sign = math::ShiftL(\
     math::simd_int4::Load(_k0.sign, _k1.sign, _k2.sign, _k3.sign), 31);\
   const math::SimdFloat4 restored = math::Or(w0, sign);\

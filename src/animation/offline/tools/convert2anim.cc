@@ -70,6 +70,10 @@ OZZ_OPTIONS_DECLARE_FLOAT(
   scale,
   "Optimizer scale tolerance in percents",
   ozz::animation::offline::AnimationOptimizer().scale_tolerance, false)
+OZZ_OPTIONS_DECLARE_FLOAT(
+  hierarchical,
+  "Optimizer hierarchical tolerance in meters",
+  ozz::animation::offline::AnimationOptimizer().hierarchical_tolerance, false)
 
 static bool ValidateEndianness(const ozz::options::Option& _option,
                                int /*_argc*/) {
@@ -263,6 +267,7 @@ int AnimationConverter::operator()(int _argc, const char** _argv) {
     optimizer.rotation_tolerance = OPTIONS_rotation;
     optimizer.translation_tolerance = OPTIONS_translation;
     optimizer.scale_tolerance = OPTIONS_scale;
+    optimizer.hierarchical_tolerance = OPTIONS_hierarchical;
     ozz::animation::offline::RawAnimation raw_optimized_animation;
     if (!optimizer(raw_animation, *skeleton, &raw_optimized_animation)) {
       ozz::log::Err() << "Failed to optimize animation." << std::endl;

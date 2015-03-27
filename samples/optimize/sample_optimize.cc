@@ -423,7 +423,11 @@ class OptimizeSampleApplication : public ozz::sample::Application {
         rebuild |= _im_gui->DoSlider(
           label, 0.f, .1f, &optimizer_.scale_tolerance, .3f, optimize_);
 
-        rebuild |= _im_gui->DoCheckBox("Hierarchical", &optimizer_.hierarchical);
+        std::sprintf(label,
+                     "Hierarchical : %0.2f mm",
+                     optimizer_.hierarchical_tolerance * 1000);
+        rebuild |= _im_gui->DoSlider(
+          label, 0.f, .1f, &optimizer_.hierarchical_tolerance, .3f, optimize_);
 
         std::sprintf(label, "Animation size : %dKB",
           static_cast<int>(animation_rt_->size()>>10));

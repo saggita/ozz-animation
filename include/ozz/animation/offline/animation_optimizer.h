@@ -70,7 +70,9 @@ class AnimationOptimizer {
   // Scale optimization tolerance, ie: the norm of the difference of two scales.
   float scale_tolerance;
 
-  bool hierarchical;
+  // Hierarchical translation optimization tolerance, defined as the distance at
+  // the far end of the hierarchy.
+  float hierarchical_tolerance;
 };
 }  // offline
 }  // animation

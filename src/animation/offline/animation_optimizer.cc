@@ -51,7 +51,7 @@ AnimationOptimizer::AnimationOptimizer()
   : translation_tolerance(1e-3f),  // 1 mm.
     rotation_tolerance(.1f * math::kPi / 180.f),  // 0.1 degree.
     scale_tolerance(1e-3f),  // 0.1%.
-    hierarchical(true) {
+    hierarchical_tolerance(1e-3f) {  // 1 mm.
 }
 
 namespace {
@@ -289,16 +289,19 @@ bool AnimationOptimizer::operator()(const RawAnimation& _input,
   _output->tracks.resize(num_tracks);
   for (int i = 0; i < num_tracks; ++i) {
     Filter(_input.tracks[i].translations,
-           CompareTranslation, LerpTranslation, translation_tolerance,
-           translation_tolerance, hierarchical_joint_specs[i].scale,
+           CompareTranslation, LerpTranslation,
+           translation_tolerance,
+           hierarchical_tolerance, hierarchical_joint_specs[i].scale,
            &_output->tracks[i].translations);
     Filter(_input.tracks[i].rotations,
-           CompareRotation, LerpRotation, rotation_tolerance,
-           translation_tolerance, hierarchical_joint_specs[i].length,
+           CompareRotation, LerpRotation,
+           rotation_tolerance,
+           hierarchical_tolerance, hierarchical_joint_specs[i].length,
            &_output->tracks[i].rotations);
     Filter(_input.tracks[i].scales,
-           CompareScale, LerpScale, scale_tolerance,
-           translation_tolerance, hierarchical_joint_specs[i].length,
+           CompareScale, LerpScale,
+           scale_tolerance,
+           hierarchical_tolerance, hierarchical_joint_specs[i].length,
            &_output->tracks[i].scales);
   }
   // Output animation is always valid.

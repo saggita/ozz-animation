@@ -200,6 +200,7 @@ TEST(Optimize, AnimationOptimizer) {
     // Rebuilds with tolerance.
     optimizer.translation_tolerance = .02f;
     optimizer.rotation_tolerance = .2f * 3.14159f / 180.f;  // .2 degree.
+    optimizer.hierarchical_tolerance = .02f;
     RawAnimation output;
     ASSERT_TRUE(optimizer(input, *skeleton, &output));
     EXPECT_EQ(output.num_tracks(), 1);

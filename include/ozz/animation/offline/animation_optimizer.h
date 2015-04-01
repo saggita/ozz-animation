@@ -71,7 +71,8 @@ class AnimationOptimizer {
   float scale_tolerance;
 
   // Hierarchical translation optimization tolerance, defined as the distance at
-  // the far end of the hierarchy.
+  // the far end of the hierarchy. This allows to consider the effect of an
+  // optimization of a joint on all its children hierarchy.
   float hierarchical_tolerance;
 };
 }  // offline

@@ -35,6 +35,7 @@
 
 #include "ozz/animation/offline/animation_builder.h"
 #include "ozz/animation/offline/animation_optimizer.h"
+#include "ozz/animation/offline/additive_animation_builder.h"
 #include "ozz/animation/offline/skeleton_builder.h"
 #include "ozz/animation/offline/raw_animation.h"
 #include "ozz/animation/offline/raw_skeleton.h"
@@ -53,6 +54,7 @@
 OZZ_OPTIONS_DECLARE_STRING(file, "Specifies input file", "", true)
 OZZ_OPTIONS_DECLARE_STRING(skeleton, "Specifies ozz skeleton (raw or runtime) input file", "", true)
 OZZ_OPTIONS_DECLARE_STRING(animation, "Specifies ozz animation output file", "", true)
+OZZ_OPTIONS_DECLARE_BOOL(additive, "Creates a delta animation that can be used for additive blending.", false, false)
 
 OZZ_OPTIONS_DECLARE_BOOL(
   optimize,
@@ -258,6 +260,19 @@ int AnimationConverter::operator()(int _argc, const char** _argv) {
     // No need for the skeleton anymore.
     ozz::memory::default_allocator()->Delete(skeleton);
     return EXIT_FAILURE;
+  }
+
+  // Make delta animation if requested.
+  if (OPTIONS_additive) {
+    ozz::log::Log() << "Makes additive animation." << std::endl;
+    ozz::animation::offline::AdditiveAnimationBuilder additive_builder;
+    RawAnimation raw_additive;
+    if (!additive_builder(raw_animation, &raw_additive)) {
+      ozz::log::Err() << "Failed to make additive animation." << std::endl;
+      return EXIT_FAILURE;
+    }
+    // Copy animation.
+    raw_animation = raw_additive;
   }
 
   // Optimizes animation if option is enabled.

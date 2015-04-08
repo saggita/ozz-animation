@@ -1,4 +1,7 @@
-Release version 0.7.3.----------------------------------------------------------
+Release version 0.8.0.----------------------------------------------------------
+ 
+ # Build pipeline
+  - Adds and support -wextra option on gcc/clang.
 
  # Library
 

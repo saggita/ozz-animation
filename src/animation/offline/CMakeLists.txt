@@ -8,6 +8,8 @@ add_library(ozz_animation_offline
   animation_builder.cc
   ${CMAKE_SOURCE_DIR}/include/ozz/animation/offline/animation_optimizer.h
   animation_optimizer.cc
+  ${CMAKE_SOURCE_DIR}/include/ozz/animation/offline/additive_animation_builder.h
+  additive_animation_builder.cc
   ${CMAKE_SOURCE_DIR}/include/ozz/animation/offline/raw_skeleton.h
   raw_skeleton.cc
   raw_skeleton_archive.cc

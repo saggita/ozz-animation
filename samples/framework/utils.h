@@ -49,6 +49,7 @@ struct RawSkeleton;
 }  // animation
 namespace sample {
 class ImGui;
+struct Mesh;
 
 // Utility class that helps with controlling animation playback time. Time is
 // computed every update according to the dt given by the caller, playback speed
@@ -128,6 +129,41 @@ bool LoadSkeleton(const char* _filename,
 // _filename and _animation must be non-NULL.
 bool LoadAnimation(const char* _filename,
                    ozz::animation::Animation* _animation);
+
+// Loads a sample::Mesh from an ozz archive file named _filename.
+// This function will fail and return false if the file cannot be opened or if
+// it is not a valid ozz mesh archive. A valid mesh archive can be
+// produced with ozz tools (fbx2skin) or using ozz animation serialization API.
+// _filename and _mesh must be non-NULL.
+bool LoadMesh(const char* _filename,
+              ozz::sample::Mesh* _mesh);
+
+class SkinningMatricesUpdater {
+public:
+
+  SkinningMatricesUpdater();
+  ~SkinningMatricesUpdater();
+
+  bool Initialize(const animation::Skeleton& _skeleton);
+
+  bool Update(const Range<math::Float4x4> _model_space);
+
+  const Range<math::Float4x4>& skinning_matrices() const {
+    return skinning_matrices_;
+  }
+
+  const Range<math::Float4x4>& inverse_bind_pose() const {
+    return inverse_bind_pose_;
+  }
+
+private:
+  // Inverse skeleton bind pose matrices.
+  Range<math::Float4x4> inverse_bind_pose_;
+
+  // Buffer of skinning matrices, result of the joint multiplication of the
+  // inverse bind pose with the model space matrix.
+  Range<math::Float4x4> skinning_matrices_;
+};
 }  // sample
 }  // ozz
 #endif  // OZZ_SAMPLES_FRAMEWORK_UTILS_H_

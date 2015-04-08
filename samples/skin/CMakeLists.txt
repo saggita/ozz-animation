@@ -1,41 +1,3 @@
-if(ozz_build_fbx)
-  include_directories(${FBX_INCLUDE_DIRS})
-
-  add_executable(sample_skin_fbx2skin
-    fbx2skin.cc
-    skin_mesh.h
-    skin_mesh.cc)
-  target_link_libraries(sample_skin_fbx2skin
-    ozz_animation_fbx
-    ozz_animation_offline
-    ozz_animation
-    ozz_options
-    ozz_base)
-  set_target_properties(sample_skin_fbx2skin
-    PROPERTIES FOLDER "samples")
-
-  add_custom_command(TARGET sample_skin_fbx2skin POST_BUILD
-    DEPENDS
-      "${ozz_media_directory}/fbx/alain/arnaud.fbx"
-    COMMAND sample_skin_fbx2skin "--file=${ozz_media_directory}/fbx/alain/arnaud.fbx" "--skeleton=${ozz_media_directory}/bin/skeleton_v1_le.ozz" "--skin=${ozz_media_directory}/bin/mesh.ozz")
-
-  set(ozz_mesh_generation_dependency sample_skin_fbx2skin)
-
-  install(TARGETS sample_skin_fbx2skin DESTINATION bin/samples/skin)
-
-  add_test(NAME sample_skin_fbx2skin COMMAND sample_skin_fbx2skin "--file=${ozz_media_directory}/fbx/alain/skeleton.fbx" "--skeleton=${ozz_media_directory}/bin/skeleton_v1_le.ozz" "--skin=${ozz_temp_directory}/mesh.ozz")
-
-  add_test(NAME sample_skin_fbx2skin_invalid_file COMMAND sample_skin_fbx2skin "--file=${ozz_temp_directory}/dont_exist.fbx" "--skeleton=${ozz_media_directory}/bin/skeleton_v1_le.ozz" "--skin=${ozz_temp_directory}/should_not_exist.ozz")
-  set_tests_properties(sample_skin_fbx2skin_invalid_file PROPERTIES WILL_FAIL true)
-
-  add_test(NAME sample_skin_fbx2skin_invalid_skeleton COMMAND sample_skin_fbx2skin "--file=${ozz_media_directory}/fbx/alain/skeleton.fbx" "--skeleton=${ozz_media_directory}/bin/animation.ozz" "--skin=${ozz_temp_directory}/should_not_exist.ozz")
-  set_tests_properties(sample_skin_fbx2skin_invalid_skeleton PROPERTIES WILL_FAIL true)
-
-  # Ensures nothing was outputted. Unfortunately there's no way to ensure this test is ran last
-  add_test(NAME sample_skin_fbx2skin_output COMMAND ${CMAKE_COMMAND} -E copy "${ozz_temp_directory}/should_not_exist.ozz" "${ozz_temp_directory}/should_not_exist_too.ozz")
-  set_tests_properties(sample_skin_fbx2skin_output PROPERTIES WILL_FAIL true)
-endif()
-
 add_custom_command(
   DEPENDS "${CMAKE_CURRENT_LIST_DIR}/README"
           "${ozz_media_directory}/collada/alain/skeleton.dae"
@@ -57,19 +19,13 @@ add_custom_command(
 
 add_executable(sample_skin
   sample_skin.cc
-  skin_mesh.h
-  skin_mesh.cc
   "${CMAKE_CURRENT_BINARY_DIR}/README"
   "${CMAKE_CURRENT_BINARY_DIR}/media/skeleton.ozz"
   "${CMAKE_CURRENT_BINARY_DIR}/media/animation.ozz"
   "${CMAKE_CURRENT_BINARY_DIR}/media/mesh.ozz")
 
 target_link_libraries(sample_skin
-  sample_framework
-  ozz_geometry
-  ozz_animation
-  ozz_options
-  ozz_base)
+  sample_framework)
 
 set_target_properties(sample_skin
   PROPERTIES FOLDER "samples")

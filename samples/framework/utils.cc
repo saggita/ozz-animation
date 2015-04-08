@@ -41,11 +41,14 @@
 #include "ozz/animation/runtime/skeleton.h"
 #include "ozz/animation/runtime/local_to_model_job.h"
 
+#include "ozz/geometry/runtime/skinning_job.h"
+
 #include "ozz/base/io/archive.h"
 #include "ozz/base/io/stream.h"
 #include "ozz/base/log.h"
 
 #include "framework/imgui.h"
+#include "framework/mesh.h"
 
 namespace ozz {
 namespace sample {
@@ -207,6 +210,87 @@ bool LoadAnimation(const char* _filename,
 
   // Once the tag is validated, reading cannot fail.
   archive >> *_animation;
+
+  return true;
+}
+
+bool LoadMesh(const char* _filename,
+              ozz::sample::Mesh* _mesh) {
+  assert(_filename && _mesh);
+  ozz::log::Out() << "Loading mesh archive: " << _filename <<
+    "." << std::endl;
+  ozz::io::File file(_filename, "rb");
+  if (!file.opened()) {
+    ozz::log::Err() << "Failed to open mesh file " << _filename <<
+      "." << std::endl;
+    return false;
+  }
+  ozz::io::IArchive archive(&file);
+  if (!archive.TestTag<ozz::sample::Mesh>()) {
+    ozz::log::Err() << "Failed to load mesh instance from file " <<
+      _filename << "." << std::endl;
+    return false;
+  }
+
+  // Once the tag is validated, reading cannot fail.
+  archive >> *_mesh;
+
+  return true;
+}
+
+SkinningMatricesUpdater::SkinningMatricesUpdater() {
+}
+
+SkinningMatricesUpdater::~SkinningMatricesUpdater() {
+  memory::Allocator* allocator = memory::default_allocator();
+  allocator->Deallocate(inverse_bind_pose_);
+  allocator->Deallocate(skinning_matrices_);
+}
+
+bool SkinningMatricesUpdater::Initialize(const animation::Skeleton& _skeleton) {
+  memory::Allocator* allocator = memory::default_allocator();
+
+  // Setup inverse bind pose matrices.
+  const int num_joints = _skeleton.num_joints();
+
+  // Allocates skinning matrices.
+  allocator->Reallocate<math::Float4x4>(skinning_matrices_, num_joints);
+
+  // Build inverse bind-pose matrices, based on the input skeleton.
+  allocator->Reallocate<math::Float4x4>(inverse_bind_pose_, num_joints);
+
+  // Convert skeleton bind-pose in local space to model-space matrices using
+  // the LocalToModelJob. Output is stored directly inside inverse_bind_pose_
+  // which will then be inverted in-place.
+  ozz::animation::LocalToModelJob ltm_job;
+  ltm_job.skeleton = &_skeleton;
+  ltm_job.input = _skeleton.bind_pose();
+  ltm_job.output = inverse_bind_pose_;
+  if (!ltm_job.Run()) {
+    return false;
+  }
+
+  // Invert matrices in-place.
+  for (int i = 0; i < num_joints; ++i) {
+    inverse_bind_pose_[i] = Invert(inverse_bind_pose_[i]);
+  }
+
+  return true;
+}
+
+bool SkinningMatricesUpdater::Update(const Range<math::Float4x4> _model_space) {
+  assert(skinning_matrices_.Count() == inverse_bind_pose_.Count());
+
+  // Ensures input matrices buffer has the correct size.
+  const size_t joints_count = _model_space.Count();
+  if (joints_count != skinning_matrices_.Count()) {
+    return false;
+  }
+
+  // Builds skinning matrices, based on the output of the animation stage.
+  for (size_t i = 0; i < joints_count; ++i) {
+    skinning_matrices_[i] = _model_space[i] * inverse_bind_pose_[i];
+  }
 
   return true;
 }

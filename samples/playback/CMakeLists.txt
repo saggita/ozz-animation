@@ -95,10 +95,7 @@ add_executable(sample_playback
   "${CMAKE_CURRENT_BINARY_DIR}/media/animation.ozz"
   ${FBX_COMMAND_OUTPUT})
 target_link_libraries(sample_playback
-  sample_framework
-  ozz_animation
-  ozz_options
-  ozz_base)
+  sample_framework)
 
 set_target_properties(sample_playback
   PROPERTIES FOLDER "samples")

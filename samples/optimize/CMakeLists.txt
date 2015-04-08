@@ -27,11 +27,8 @@ add_executable(sample_optimize
   "${CMAKE_CURRENT_BINARY_DIR}/media/raw_animation.ozz")
 
 target_link_libraries(sample_optimize
-  sample_framework
   ozz_animation_offline
-  ozz_animation
-  ozz_options
-  ozz_base)
+  sample_framework)
 
 set_target_properties(sample_optimize
   PROPERTIES FOLDER "samples")

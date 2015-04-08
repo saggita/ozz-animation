@@ -28,6 +28,8 @@
 //                                                                            //
 //============================================================================//
 
+#include "framework/mesh.h"
+
 #include "ozz/animation/runtime/skeleton.h"
 #include "ozz/animation/runtime/animation.h"
 #include "ozz/animation/runtime/sampling_job.h"
@@ -54,8 +56,6 @@
 #include "framework/renderer.h"
 #include "framework/imgui.h"
 #include "framework/utils.h"
-
-#include "skin_mesh.h"
 
 // Skeleton archive can be specified as an option.
 OZZ_OPTIONS_DECLARE_STRING(
@@ -120,21 +120,14 @@ class SkinSampleApplication : public ozz::sample::Application {
 
     // Builds skinning matrices, based on the output of the animation stage.
     for (int i = 0; i < skeleton_.num_joints(); ++i) {
-      skinning_matrices_[i] = models_[i] * mesh_.inverse_bind_poses[i];
+      skinning_matrices_[i] = models_[i] * input_mesh_.inverse_bind_poses[i];
     }
-
-    // Prepares rendering mesh, which allocates the buffers that are filled as
-    // output of the skinning job. 
-    const int vertex_count = mesh_.vertex_count();
-    const int index_count = mesh_.triangle_index_count();
-    const int max_influences_count = mesh_.max_influences_count();
-    ozz::sample::Renderer::Mesh mesh(vertex_count, index_count);
 
     // Runs a skinning job per mesh part. Triangle indices are shared
     // across parts.
     int processed_vertex_count = 0;
-    for (size_t i = 0; i < mesh_.parts.size(); ++i) {
-      const ozz::sample::SkinnedMesh::Part& part = mesh_.parts[i];
+    for (size_t i = 0; i < input_mesh_.parts.size(); ++i) {
+      const ozz::sample::Mesh::Part& part = input_mesh_.parts[i];
 
       // Setup vertex and influence counts.
       const int part_vertex_count = part.vertex_count();
@@ -158,88 +151,49 @@ class SkinSampleApplication : public ozz::sample::Application {
       skinning_job.joint_matrices = skinning_matrices_;
 
       // Setup joint's indices.
-      skinning_job.joint_indices.begin = array_begin(part.joint_indices);
-      skinning_job.joint_indices.end = array_end(part.joint_indices);
+      skinning_job.joint_indices = make_range(part.joint_indices);
       skinning_job.joint_indices_stride = sizeof(uint16_t) * part_influences_count;
 
       // Setup joint's weights.
       if (part_influences_count > 1) {
-        skinning_job.joint_weights.begin = array_begin(part.joint_weights);
-        skinning_job.joint_weights.end = array_end(part.joint_weights);
+        skinning_job.joint_weights = make_range(part.joint_weights);
         skinning_job.joint_weights_stride = sizeof(float) * (part_influences_count - 1);
       }
 
       // Setup input positions, coming from the loaded mesh.
-      skinning_job.in_positions.begin = &array_begin(part.positions)->x;
-      skinning_job.in_positions.end = &array_end(part.positions)->x;
-      skinning_job.in_positions_stride = sizeof(ozz::math::Float3);
+      skinning_job.in_positions = make_range(part.positions);
+      skinning_job.in_positions_stride = sizeof(float) * 3;
 
       // Setup output positions, coming from the rendering output mesh buffers.
       // We need to offset the buffer every loop.
-      ozz::sample::Renderer::Mesh::Positions pbuffer = mesh.positions();
-      float* positions = reinterpret_cast<float*>(
-        reinterpret_cast<uintptr_t>(pbuffer.data.begin) +
-        processed_vertex_count * pbuffer.stride);
-      skinning_job.out_positions.begin = positions;
+      skinning_job.out_positions.begin =
+        array_begin(rendering_mesh_.parts[0].positions) + processed_vertex_count * 3;
       skinning_job.out_positions.end =
-        ozz::PointerStride(positions, pbuffer.stride * part_vertex_count);
-      skinning_job.out_positions_stride = pbuffer.stride;
+        skinning_job.out_positions.begin + part_vertex_count * 3;
+      skinning_job.out_positions_stride = sizeof(float) * 3;
 
       // Setup input normals, coming from the loaded mesh.
-      skinning_job.in_normals.begin = &array_begin(part.normals)->x;
-      skinning_job.in_normals.end = &array_end(part.normals)->x;
-      skinning_job.in_normals_stride = sizeof(ozz::math::Float3);
+      skinning_job.in_normals = make_range(part.normals);
+      skinning_job.in_normals_stride = sizeof(float) * 3;
 
       // Setup output normals, coming from the rendering output mesh buffers.
       // We need to offset the buffer every loop.
-      ozz::sample::Renderer::Mesh::Normals nbuffer = mesh.normals();
-      float* normals = reinterpret_cast<float*>(
-        reinterpret_cast<uintptr_t>(nbuffer.data.begin) +
-        processed_vertex_count * nbuffer.stride);
-      skinning_job.out_normals.begin = normals;
+      skinning_job.out_normals.begin =
+        array_begin(rendering_mesh_.parts[0].normals) + processed_vertex_count * 3;
       skinning_job.out_normals.end =
-        ozz::PointerStride(normals, nbuffer.stride * part_vertex_count);
-      skinning_job.out_normals_stride = nbuffer.stride;
+        skinning_job.out_normals.begin + part_vertex_count * 3;
+      skinning_job.out_normals_stride = sizeof(float) * 3;
 
       // Execute the job, which should succeed unless a parameter is invalid.
       if (!skinning_job.Run()) {
         return false;
       }
 
-      // Also fills colors for this part.
-      // Note that usually vertex colors, like uv, should not be stored with
-      // positions and normals in a dynamic vertex buffers, as they are static, 
-      // aka not affected by skinning.
-      ozz::sample::Renderer::Mesh::Colors cbuffer = mesh.colors();
-      ozz::sample::Renderer::Mesh::Color* colors =
-        ozz::PointerStride(cbuffer.data.begin,
-                           cbuffer.stride * processed_vertex_count);
-      ozz::sample::Renderer::Mesh::Color color = {255, 255, 255, 255};
-      if (show_influences_count_) {
-        color.red = static_cast<uint8_t>(
-          skinning_job.influences_count * 255 / max_influences_count);
-        color.green = 255 - color.red;
-        color.blue = 0;
-      }
-      for (int j = 0; j < part_vertex_count; ++j) {
-        *colors = color;
-        colors = ozz::PointerStride(colors, cbuffer.stride);
-      }
-
       // Some more vertices were processed.
       processed_vertex_count += part_vertex_count;
     }
 
-    { // Indices
-      ozz::sample::Renderer::Mesh::Indices buffer = mesh.indices();
-      uint16_t* indices = buffer.data.begin;
-      for (int i = 0; i < index_count; ++i) {
-        *indices = mesh_.triangle_indices[i];
-        indices = ozz::PointerStride(indices, buffer.stride);
-      }
-    }
-
-    _renderer->DrawMesh(ozz::math::Float4x4::identity(), mesh);
+    _renderer->DrawMesh(rendering_mesh_, ozz::math::Float4x4::identity());
 
     return true;
   }
@@ -268,19 +222,88 @@ class SkinSampleApplication : public ozz::sample::Application {
     cache_ = allocator->New<ozz::animation::SamplingCache>(num_joints);
 
     // Reading mesh.
-    if (!LoadSkinMesh()) {
+    if (!ozz::sample::LoadMesh(OPTIONS_mesh, &input_mesh_)) {
       return false;
     }
 
     // The number of joints of the mesh needs to match skeleton.
-    if (mesh_.num_joints() != num_joints) {
+    if (input_mesh_.num_joints() != num_joints) {
       ozz::log::Err() << "The provided mesh doesn't match skeleton "
         "(joint count mismatch)." << std::endl;
       return false;
     }
 
     // Init default value for influences count limitation option.
-    limit_influences_count_ = mesh_.max_influences_count();
+    limit_influences_count_ = input_mesh_.max_influences_count();
+
+    if (!PrepareRenderingMesh()) {
+      return false;
+    }
+
+
+    return true;
+  }
+
+  // Prepares rendering mesh, which allocates the buffers that are filled as
+  // output of the skinning job.
+  // The sample uses sample framework mesh for rendering, but a real-world
+  // rendering engine would expose dynamic vertex buffers.
+  bool PrepareRenderingMesh() {
+
+    // Setup vertex buffers
+    const int vertex_count = input_mesh_.vertex_count();
+    const int index_count = input_mesh_.triangle_index_count();
+    rendering_mesh_.parts.resize(1); // One single part with all vertices.
+    rendering_mesh_.parts[0].positions.resize(vertex_count * 3);  // 3 floats per position.
+    rendering_mesh_.parts[0].normals.resize(vertex_count * 3);  // 3 floats per normal.
+
+    // Copy indices.
+    rendering_mesh_.triangle_indices.resize(index_count);
+    for (int i = 0; i < index_count; ++i) {
+      rendering_mesh_.triangle_indices[i] = input_mesh_.triangle_indices[i];
+    }
+
+    return SetupVertexColors();
+  }
+
+  bool SetupVertexColors() {
+    // Makes sure color rendering buffer is big enough (4 uint8_t per vertex).
+    rendering_mesh_.parts[0].colors.resize(input_mesh_.vertex_count() * 4);
+
+    // Iterates parts and fills output color buffer.
+    int processed_vertex_count = 0;
+    for (size_t i = 0; i < input_mesh_.parts.size(); ++i) {
+      const ozz::sample::Mesh::Part& part = input_mesh_.parts[i];
+
+      uint8_t color[4] = {255, 255, 255, 255};
+      // Computes vertex color based on the number of influencing vertices.
+      if (show_influences_count_) {
+        const int max_influences_count = ozz::math::Clamp(
+          1,
+          input_mesh_.max_influences_count() - 1,
+          limit_influences_count_ - 1);
+        const int part_influences_count = ozz::math::Min(
+          limit_influences_count_, part.influences_count()) - 1;
+
+        color[0] = static_cast<uint8_t>(
+          part_influences_count * 255 / max_influences_count);
+        color[1] = 255 - color[0];
+        color[2] = 0;
+      }
+      const int part_vertex_count = part.vertex_count();
+      for (int j = processed_vertex_count;
+           j < processed_vertex_count + part_vertex_count;
+           ++j) {
+        uint8_t* output = &rendering_mesh_.parts[0].colors[j * 4];
+        output[0] = color[0];
+        output[1] = color[1];
+        output[2] = color[2];
+        output[3] = color[3];
+      }
+
+      // More vertices processed.
+      processed_vertex_count += part_vertex_count;
+    }
 
     return true;
   }
@@ -291,29 +314,6 @@ class SkinSampleApplication : public ozz::sample::Application {
     allocator->Deallocate(models_);
     allocator->Deallocate(skinning_matrices_);
     allocator->Delete(cache_);
-  }
-
-  bool LoadSkinMesh() {
-    const char* filename = OPTIONS_mesh;
-    ozz::log::Out() << "Loading mesh archive: " << filename <<
-      "." << std::endl;
-    ozz::io::File file(filename, "rb");
-    if (!file.opened()) {
-      ozz::log::Err() << "Failed to open mesh file " << filename <<
-        "." << std::endl;
-      return false;
-    }
-    ozz::io::IArchive archive(&file);
-    if (!archive.TestTag<ozz::sample::SkinnedMesh>()) {
-      ozz::log::Err() << "Failed to load mesh instance from file " <<
-        filename << "." << std::endl;
-      return false;
-    }
-
-    // Once the tag is validated, reading cannot fail.
-    archive >> mesh_;
-
-    return true;
   }
 
   virtual bool OnGui(ozz::sample::ImGui* _im_gui) {
@@ -329,12 +329,18 @@ class SkinSampleApplication : public ozz::sample::Application {
       static bool open = true;
       ozz::sample::ImGui::OpenClose oc(_im_gui, "Skinning options", &open);
       if (open) {
+        bool colors_rebuild = false;
         char label[32];
         sprintf(label, "Limit influences: %d", limit_influences_count_);
-        _im_gui->DoSlider(label,
-                          1, mesh_.max_influences_count(),
-                          &limit_influences_count_);
-        _im_gui->DoCheckBox("Show influences", &show_influences_count_);
+        colors_rebuild |= _im_gui->DoSlider(
+          label,
+          1, input_mesh_.max_influences_count(), &limit_influences_count_);
+        colors_rebuild |= _im_gui->DoCheckBox("Show influences", &show_influences_count_);
+
+        // Rebuild vertex colors if an option has changed.
+        if (colors_rebuild) {
+          SetupVertexColors();
+        }
       }
     }
 
@@ -378,7 +384,13 @@ class SkinSampleApplication : public ozz::sample::Application {
 
   // The input mesh containing skinning information (joint indices, weights...).
   // This mesh is loaded from a file.
-  ozz::sample::SkinnedMesh mesh_;
+  ozz::sample::Mesh input_mesh_;
+
+  // The rendering mesh, filled with skinned vertices outputted from the
+  // SkinningJob stage.
+  // In a proper rendering engine (not a sample), this would be implemented with
+  // dynamic vertex buffers.
+  ozz::sample::Mesh rendering_mesh_;
 };
 
 int main(int _argc, const char** _argv) {

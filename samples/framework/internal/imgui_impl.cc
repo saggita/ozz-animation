@@ -154,7 +154,7 @@ void ImGuiImpl::BeginFrame(const Inputs& _inputs, const math::RectInt& _rect,
     static_cast<float>(_rect.bottom),
     static_cast<float>(_rect.width),
     static_cast<float>(_rect.height));
-  Container container = {rect, rect.height - kWidgetHeight};
+  Container container = {rect, rect.height - kWidgetHeight, false};
   containers_.push_back(container);
 
   // Setup GL context in order to render layered the widgets.

@@ -28,7 +28,7 @@
 //                                                                            //
 //============================================================================//
 
-#include "skin_mesh.h"
+#include "mesh.h"
 
 #include "ozz/base/memory/allocator.h"
 #include "ozz/base/containers/vector_archive.h"
@@ -40,25 +40,26 @@
 
 namespace ozz {
 namespace sample {
-SkinnedMesh::SkinnedMesh() {
+Mesh::Mesh() {
 }
 
-SkinnedMesh::~SkinnedMesh() {
+Mesh::~Mesh() {
 }
 }  // sample
 
 namespace io {
 
-OZZ_IO_TYPE_NOT_VERSIONABLE(sample::SkinnedMesh::Part)
+OZZ_IO_TYPE_NOT_VERSIONABLE(sample::Mesh::Part)
 
 template <>
 void Save(OArchive& _archive,
-          const sample::SkinnedMesh::Part* _parts,
+          const sample::Mesh::Part* _parts,
           size_t _count) {
   for (size_t i = 0; i < _count; ++i) {
-    const sample::SkinnedMesh::Part& part = _parts[i];
+    const sample::Mesh::Part& part = _parts[i];
     _archive << part.positions;
     _archive << part.normals;
+    _archive << part.colors;
     _archive << part.joint_indices;
     _archive << part.joint_weights;
   }
@@ -66,14 +67,15 @@ void Save(OArchive& _archive,
 
 template <>
 void Load(IArchive& _archive,
-          sample::SkinnedMesh::Part* _parts,
+          sample::Mesh::Part* _parts,
           size_t _count,
           uint32_t _version) {
   (void)_version;
   for (size_t i = 0; i < _count; ++i) {
-    sample::SkinnedMesh::Part& part = _parts[i];
+    sample::Mesh::Part& part = _parts[i];
     _archive >> part.positions;
     _archive >> part.normals;
+    _archive >> part.colors;
     _archive >> part.joint_indices;
     _archive >> part.joint_weights;
   }
@@ -81,10 +83,10 @@ void Load(IArchive& _archive,
 
 template <>
 void Save(OArchive& _archive,
-          const sample::SkinnedMesh* _meshes,
+          const sample::Mesh* _meshes,
           size_t _count) {
   for (size_t i = 0; i < _count; ++i) {
-    const sample::SkinnedMesh& mesh = _meshes[i];
+    const sample::Mesh& mesh = _meshes[i];
     _archive << mesh.parts;
     _archive << mesh.triangle_indices;
     _archive << mesh.inverse_bind_poses;
@@ -93,12 +95,12 @@ void Save(OArchive& _archive,
 
 template <>
 void Load(IArchive& _archive,
-          sample::SkinnedMesh* _meshes,
+          sample::Mesh* _meshes,
           size_t _count,
           uint32_t _version) {
   (void)_version;
   for (size_t i = 0; i < _count; ++i) {
-    sample::SkinnedMesh& mesh = _meshes[i];
+    sample::Mesh& mesh = _meshes[i];
     _archive >> mesh.parts;
     _archive >> mesh.triangle_indices;
     _archive >> mesh.inverse_bind_poses;

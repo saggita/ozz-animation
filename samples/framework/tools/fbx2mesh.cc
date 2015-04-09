@@ -455,8 +455,8 @@ bool SplitParts(const ozz::sample::Mesh& _skinned_mesh,
 
     // Resize output part.
     const int influences = i + 1;
-    out_part.positions.resize(bucket_vertex_count);
-    out_part.normals.resize(bucket_vertex_count);
+    out_part.positions.resize(bucket_vertex_count * 3);  // x, y, z components.
+    out_part.normals.resize(bucket_vertex_count * 3);
     out_part.joint_indices.resize(bucket_vertex_count * influences);
     out_part.joint_weights.resize(bucket_vertex_count * influences);
 
@@ -464,9 +464,15 @@ bool SplitParts(const ozz::sample::Mesh& _skinned_mesh,
     for (size_t j = 0; j < bucket_vertex_count; ++j) {
       // Fills positions.
       const size_t bucket_vertex_index = bucket[j];
-      out_part.positions[j] = in_part.positions[bucket_vertex_index];
+      out_part.positions[j * 3 + 0] = in_part.positions[bucket_vertex_index * 3 + 0];
+      out_part.positions[j * 3 + 1] = in_part.positions[bucket_vertex_index * 3 + 1];
+      out_part.positions[j * 3 + 2] = in_part.positions[bucket_vertex_index * 3 + 2];
+
       // Fills normals.
-      out_part.normals[j] = in_part.normals[bucket_vertex_index];
+      out_part.normals[j * 3 + 0] = in_part.normals[bucket_vertex_index * 3 + 0];
+      out_part.normals[j * 3 + 1] = in_part.normals[bucket_vertex_index * 3 + 1];
+      out_part.normals[j * 3 + 2] = in_part.normals[bucket_vertex_index * 3 + 2];
+
       // Fills joints indices.
       const uint16_t* in_indices =
         &in_part.joint_indices[bucket_vertex_index * max_influences];
@@ -475,6 +481,7 @@ bool SplitParts(const ozz::sample::Mesh& _skinned_mesh,
       for (int k = 0; k < influences; ++k) {
         out_indices[k] = in_indices[k];
       }
+
       // Fills weights. Note that there's no weight if there's only one joint
       // influencing a vertex.
       if (influences > 1) {

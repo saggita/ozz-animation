@@ -18,8 +18,8 @@ if(ozz_build_fbx)
 
   add_custom_command(TARGET sample_fbx2mesh POST_BUILD
     DEPENDS
-      "${ozz_media_directory}/fbx/alain/skeleton.fbx"
-    COMMAND sample_fbx2mesh "--file=${ozz_media_directory}/fbx/alain/skeleton.fbx" "--skeleton=${ozz_media_directory}/bin/skeleton_v1_le.ozz" "--mesh=${ozz_media_directory}/bin/mesh.ozz")
+      "${ozz_media_directory}/fbx/alain/arnaud.fbx"
+    COMMAND sample_fbx2mesh "--file=${ozz_media_directory}/fbx/alain/arnaud.fbx" "--skeleton=${ozz_media_directory}/bin/skeleton_v1_le.ozz" "--mesh=${ozz_media_directory}/bin/mesh.ozz")
 
   set(ozz_mesh_generation_dependency sample_fbx2mesh)
 

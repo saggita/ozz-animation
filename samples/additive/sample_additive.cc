@@ -171,16 +171,19 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
   // Samples animation, transforms to model space and renders.
   virtual bool OnDisplay(ozz::sample::Renderer* _renderer) {
 
-    // Update skinning with latest blending stage output.
-    if (!skinning_matrices_updater_.Update(models_)) {
-      return false;
+    // Update skinning matrices latest blending stage output.
+    assert(models_.Count() == skinning_matrices_.Count() &&
+           models_.Count() == mesh_.inverse_bind_poses.size());
+
+    // Builds skinning matrices, based on the output of the animation stage.
+    for (size_t i = 0; i < models_.Count(); ++i) {
+      skinning_matrices_[i] = models_[i] * mesh_.inverse_bind_poses[i];
     }
 
     // Renders skin.
-    return _renderer->DrawSkinnedMesh(
-      mesh_,
-      skinning_matrices_updater_.skinning_matrices(),
-      ozz::math::Float4x4::identity());
+    return _renderer->DrawSkinnedMesh(mesh_,
+                                      skinning_matrices_,
+                                      ozz::math::Float4x4::identity());
   }
 
   virtual bool OnInitialize() {
@@ -190,19 +193,20 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     if (!ozz::sample::LoadSkeleton(OPTIONS_skeleton, &skeleton_)) {
         return false;
     }
+    const int num_soa_joints = skeleton_.num_soa_joints();
+    const int num_joints = skeleton_.num_joints();
 
     // Reading skinned mesh.
     if (!ozz::sample::LoadMesh(OPTIONS_mesh, &mesh_)) {
       return false;
     }
 
-    // Initialize skinning matrices updater utility.
-    if (!skinning_matrices_updater_.Initialize(skeleton_)) {
+    // The number of joints of the mesh needs to match skeleton.
+    if (mesh_.num_joints() != num_joints) {
+      ozz::log::Err() << "The provided mesh doesn't match skeleton "
+        "(joint count mismatch)." << std::endl;
       return false;
     }
-
-    const int num_joints = skeleton_.num_joints();
-    const int num_soa_joints = skeleton_.num_soa_joints();
 
     // Reading animations.
     const char* filenames[] = {
@@ -234,6 +238,7 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
 
     // Allocates model space runtime buffers of blended data.
     models_ = allocator->AllocateRange<ozz::math::Float4x4>(num_joints);
+    skinning_matrices_ = allocator->AllocateRange<ozz::math::Float4x4>(num_joints);
 
     // Allocates per-joint weights used for the partial additive animation.
     // Note that this is a Soa structure.
@@ -288,7 +293,8 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
     }
     allocator->Deallocate(upper_body_joint_weights_);
     allocator->Deallocate(blended_locals_);
-    allocator->Deallocate(models_.begin);
+    allocator->Deallocate(models_);
+    allocator->Deallocate(skinning_matrices_);
   }
 
   virtual bool OnGui(ozz::sample::ImGui* _im_gui) {
@@ -430,12 +436,12 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
   // job after the blending stage.
   ozz::Range<ozz::math::Float4x4> models_;
 
+  // Buffer of skinning matrices, result of the joint multiplication of the
+  // inverse bind pose with the model space matrix.
+  ozz::Range<ozz::math::Float4x4> skinning_matrices_;
+
   // The mesh used by the sample.
   ozz::sample::Mesh mesh_;
-
-  // Utility class that computes skinning matrices from a skeleton and its
-  // model space matrices.
-  ozz::sample::SkinningMatricesUpdater skinning_matrices_updater_;
 };
 
 int main(int _argc, const char** _argv) {

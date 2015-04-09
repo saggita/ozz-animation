@@ -138,32 +138,6 @@ bool LoadAnimation(const char* _filename,
 bool LoadMesh(const char* _filename,
               ozz::sample::Mesh* _mesh);
 
-class SkinningMatricesUpdater {
-public:
-
-  SkinningMatricesUpdater();
-  ~SkinningMatricesUpdater();
-
-  bool Initialize(const animation::Skeleton& _skeleton);
-
-  bool Update(const Range<math::Float4x4> _model_space);
-
-  const Range<math::Float4x4>& skinning_matrices() const {
-    return skinning_matrices_;
-  }
-
-  const Range<math::Float4x4>& inverse_bind_pose() const {
-    return inverse_bind_pose_;
-  }
-
-private:
-  // Inverse skeleton bind pose matrices.
-  Range<math::Float4x4> inverse_bind_pose_;
-
-  // Buffer of skinning matrices, result of the joint multiplication of the
-  // inverse bind pose with the model space matrix.
-  Range<math::Float4x4> skinning_matrices_;
-};
 }  // sample
 }  // ozz
 #endif  // OZZ_SAMPLES_FRAMEWORK_UTILS_H_

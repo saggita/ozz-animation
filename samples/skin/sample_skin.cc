@@ -240,7 +240,6 @@ class SkinSampleApplication : public ozz::sample::Application {
       return false;
     }
 
-
     return true;
   }
 

@@ -797,7 +797,6 @@ bool RendererImpl::DrawSkinnedMesh(const Mesh& _mesh,
   const GLsizei normals_offset = sizeof(float) * 3;
   const GLsizei positions_stride = sizeof(float) * 6;
   const GLsizei normals_stride = positions_stride;
-  const GLsizei skinned_data_offset = positions_offset;
   const GLsizei skinned_data_size = vertex_count * positions_stride;
 
   // Colors are contiguous. They aren't transformed, so they can be directly

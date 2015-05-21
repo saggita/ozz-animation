@@ -809,7 +809,7 @@ bool RendererImpl::DrawSkinnedMesh(const Mesh& _mesh,
   // Reallocate vertex buffer.
   const GLsizei vbo_size = skinned_data_size + colors_size;
   GL(BindBuffer(GL_ARRAY_BUFFER, dynamic_array_vbo_));
-  GL(BufferData(GL_ARRAY_BUFFER, vbo_size, NULL, GL_STREAM_DRAW));
+  GL(BufferData(GL_ARRAY_BUFFER, vbo_size, NULL, GL_DYNAMIC_DRAW));
   void* vbo_map = ozz::memory::default_allocator()->Allocate(vbo_size, 16);
 
   // Iterate mesh parts and fills vbo.
@@ -895,11 +895,9 @@ bool RendererImpl::DrawSkinnedMesh(const Mesh& _mesh,
     // Handles colors which aren't affected by skinning.
     if (part_vertex_count == part.colors.size() / 4) {
       // Optimal path used when the right number of colors is provided.
-      GL(BufferSubData(
-        GL_ARRAY_BUFFER,
-        colors_offset + processed_vertex_count * colors_stride,
-        part_vertex_count * colors_stride,
-        array_begin(part.colors)));
+      memcpy(ozz::PointerStride(vbo_map, colors_offset + processed_vertex_count * colors_stride),
+             ozz::PointerStride(array_begin(part.colors), colors_offset + processed_vertex_count * colors_stride),
+             part_vertex_count * colors_stride);
     } else {
       // Un-optimal path used when the right number of colors is not provided.
       OZZ_STATIC_ASSERT(sizeof(kDefaultColorArray[0]) == colors_stride);
@@ -908,11 +906,9 @@ bool RendererImpl::DrawSkinnedMesh(const Mesh& _mesh,
            j += OZZ_ARRAY_SIZE(kDefaultColorArray)) {
         const size_t this_loop_count =
           math::Min(OZZ_ARRAY_SIZE(kDefaultColorArray), part_vertex_count - j);
-        GL(BufferSubData(
-          GL_ARRAY_BUFFER,
-          colors_offset + (processed_vertex_count + j) * colors_stride,
-          colors_stride * this_loop_count,
-          kDefaultColorArray));
+        memcpy(ozz::PointerStride(vbo_map, colors_offset + (processed_vertex_count + j) * colors_stride),
+               kDefaultColorArray,
+               colors_stride * this_loop_count);
       }
     }
 
@@ -921,10 +917,7 @@ bool RendererImpl::DrawSkinnedMesh(const Mesh& _mesh,
   }
 
   // Updates dynamic vertex buffer with skinned data.
-  GL(BufferSubData(GL_ARRAY_BUFFER,
-                   skinned_data_offset,
-                   skinned_data_size,
-                   vbo_map));
+  GL(BufferSubData(GL_ARRAY_BUFFER, 0, vbo_size, vbo_map));
 
   // Binds shader with this array buffer.
   mesh_shader_->Bind(_transform,

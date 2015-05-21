@@ -123,20 +123,16 @@ class AdditiveBlendSampleApplication : public ozz::sample::Application {
 
     // Prepares blending layers.
     ozz::animation::BlendingJob::Layer layers[1];
-    for (int i = 0; i < 1; ++i) {
-      layers[i].transform = samplers_[i].locals;
-      layers[i].weight = samplers_[i].weight_setting;
-    }
+    layers[0].transform = samplers_[kMainAnimation].locals;
+    layers[0].weight = samplers_[kMainAnimation].weight_setting;
 
     ozz::animation::BlendingJob::Layer additive_layers[1];
-    for (int i = 1; i < 2; ++i) {
-      additive_layers[0].transform = samplers_[i].locals;
-      additive_layers[0].weight = samplers_[i].weight_setting;
+    additive_layers[0].transform = samplers_[kAdditiveAnimation].locals;
+    additive_layers[0].weight = samplers_[kAdditiveAnimation].weight_setting;
 
-      // Set per-joint weights for the additive blended layer.
-      if (upper_body_mask_enable_) {
-        additive_layers[0].joint_weights = upper_body_joint_weights_;
-      }
+    // Set per-joint weights for the additive blended layer.
+    if (upper_body_mask_enable_) {
+      additive_layers[0].joint_weights = upper_body_joint_weights_;
     }
 
     // Setups blending job.
